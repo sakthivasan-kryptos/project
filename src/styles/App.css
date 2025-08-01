@@ -431,3 +431,74 @@
 .analysis-card:nth-child(2) { animation-delay: 0.2s; }
 .analysis-card:nth-child(3) { animation-delay: 0.3s; }
 .analysis-card:nth-child(4) { animation-delay: 0.4s; }
+
+/* Authentication Styles */
+.protected-route-loading {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  color: #374151;
+}
+
+.protected-route-loading .loading-spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid #e5e7eb;
+  border-top: 3px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+.protected-route-loading p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+/* User info in header */
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.2;
+}
+
+/* Global loading spinner animation */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive adjustments for authentication */
+@media (max-width: 768px) {
+  .user-info {
+    display: none;
+  }
+}
+
+/* Focus styles for better accessibility */
+.checkbox-input:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+.demo-credential:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Smooth transitions for better UX */
+* {
+  box-sizing: border-box;
+}
+
+.login-card,
+.demo-credentials,
+.error-message {
+  will-change: transform;
+}
