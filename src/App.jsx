@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Layout } from 'antd';
 import { AuthProvider } from './contexts/AuthContext';
 import { Header, Sidebar } from './components/layout';
-import { Dashboard, NewReview, AllReviews, Regulations, Reports, Settings, LoginPage } from './pages';
+import { Dashboard, NewReview, AllReviews, Regulations, Reports, Settings, LoginPage, ReviewResults } from './pages';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useAuth } from './contexts/AuthContext';
 import './styles/App.css';
