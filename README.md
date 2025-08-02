@@ -1,176 +1,183 @@
-# QFC Employment Standards Office - Compliance Management System
+# QFC Employment Standards Office - Compliance Analysis System
 
-A modern React application built with Vite and Ant Design for managing compliance reviews and employment standards.
+A comprehensive web application for analyzing employment documents against Qatar Financial Centre (QFC) regulations and standards.
 
-## 🏗️ Project Structure
+## Features
 
-The project has been organized into a clean, scalable folder structure following React best practices:
+### Core Functionality
+- **Document Upload & Analysis**: Upload employment contracts and HR manuals for automated compliance analysis
+- **Real-time Compliance Checking**: AI-powered analysis against QFC regulations
+- **Comprehensive Reporting**: Detailed compliance reports with actionable recommendations
+- **Dashboard Analytics**: Overview of compliance metrics and trends
 
-```
-src/
-├── components/           # Reusable UI components
-│   ├── layout/          # Layout-specific components
-│   │   ├── Header.jsx   # Application header with logo and user info
-│   │   ├── Sidebar.jsx  # Navigation sidebar
-│   │   └── index.js     # Clean exports for layout components
-│   └── ui/              # Reusable UI components
-│       ├── PageHeader.jsx    # Consistent page headers
-│       ├── ReviewCard.jsx    # Review display cards
-│       ├── StatCard.jsx      # Statistics display cards
-│       └── index.js          # Clean exports for UI components
-├── data/                # Data layer
-│   ├── index.js         # Centralized data exports
-│   ├── menuConfig.jsx   # Navigation menu configuration
-│   ├── mockData.js      # Mock data and constants
-│   └── tableColumns.jsx # Table column definitions
-├── pages/               # Page components
-│   ├── AllReviews.jsx   # All reviews management page
-│   ├── Dashboard.jsx    # Main dashboard page
-│   ├── NewReview.jsx    # New review creation page
-│   ├── Regulations.jsx  # Compliance analysis results
-│   ├── Reports.jsx      # Reports and analytics page
-│   ├── Settings.jsx     # User settings page
-│   └── index.js         # Clean exports for pages
-├── styles/              # Styling files
-│   ├── App.css          # Component-specific styles
-│   └── index.css        # Global styles and overrides
-└── utils/               # Utility functions (ready for future use)
-```
+### Compliance Analysis Components
 
-## 🚀 Getting Started
+#### 1. Mandatory Compliance Issues
+Displays critical violations that must be fixed to meet QFC requirements:
+- **Violation details** with specific QFC article references
+- **Current document state** vs. **QFC requirements**
+- **Required fixes** with clear action items
+- Color-coded severity indicators
 
-### Prerequisites
-- Node.js (v16 or higher)
-- npm or yarn
+#### 2. Best Practice Recommendations
+Provides suggestions for improving employment practices:
+- **Current situation** analysis
+- **Specific recommendations** for improvement
+- **Benefits** of implementing each recommendation
+- Categorized by area (Contract Requirements, Termination Procedures, etc.)
 
-### Installation
-```bash
-# Clone the repository
-git clone <repository-url>
+#### 3. Document Inconsistencies
+Identifies inconsistencies and ambiguities in documents:
+- **Issue identification** with clear problem statements
+- **Impact analysis** of each inconsistency
+- **Solution recommendations** to resolve issues
 
-# Navigate to project directory
-cd qfc-compliance-system
+#### 4. Compliance Summary
+High-level overview of compliance status:
+- **Overall compliance status** (Compliant/Non-Compliant/Partially Compliant)
+- **Critical issues count** with visual indicators
+- **Must-fix items** prioritized list
+- **Compliance score** with progress visualization
 
-# Install dependencies
-npm install
+## API Response Structure
 
-# Start development server
-npm run dev
-```
+The application expects compliance analysis data in the following format:
 
-### Available Scripts
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
-
-## 📁 Architecture Benefits
-
-### Modularity
-- **Separation of Concerns**: Each component has a single responsibility
-- **Reusable Components**: UI components can be used across multiple pages
-- **Clean Imports**: Index files provide clean import paths
-
-### Scalability
-- **Easy to Extend**: Add new pages by creating files in `/pages`
-- **Component Library**: Build a consistent design system in `/components/ui`
-- **Data Layer**: Centralized data management in `/data`
-
-### Maintainability
-- **Smaller Files**: No more 680+ line monoliths
-- **Clear Structure**: Easy to locate and modify specific functionality
-- **Consistent Patterns**: Standardized component structure
-
-## 🧩 Component Usage Examples
-
-### Using UI Components
-```jsx
-import { PageHeader, StatCard, ReviewCard } from '../components/ui';
-
-// In your page component
-<PageHeader 
-  title="Dashboard" 
-  subtitle="Welcome back, Sarah."
-/>
-
-<StatCard 
-  title="Reviews This Month" 
-  value={23}
-  backgroundColor="#f0f8ff"
-/>
+```json
+{
+  "mandatory_compliance_issues": [
+    {
+      "violation": "Description of the violation",
+      "qfc_article": "Article reference (e.g., Article 18)",
+      "document_states": "What the document currently says",
+      "qfc_requires": "What QFC regulations require",
+      "fix_required": "Specific action needed to fix"
+    }
+  ],
+  "best_practice_recommendations": [
+    {
+      "area": "Category of recommendation",
+      "current": "Current situation description",
+      "recommendation": "Specific recommendation",
+      "benefit": "Benefit of implementing this recommendation"
+    }
+  ],
+  "document_inconsistencies": [
+    {
+      "issue": "Description of the inconsistency",
+      "problem": "Why this is problematic",
+      "solution": "How to resolve the inconsistency"
+    }
+  ],
+  "compliance_summary": {
+    "status": "Compliant|Non-Compliant|Partially Compliant",
+    "critical_issues": 5,
+    "must_fix_items": [
+      "List of critical items that must be addressed"
+    ]
+  }
+}
 ```
 
-### Using Layout Components
-```jsx
-import { Header, Sidebar } from '../components/layout';
+## UI Components
 
-// Layout components are already integrated in App.jsx
-```
+### Compliance Display Components
+- `ComplianceIssuesCard`: Displays mandatory compliance issues
+- `BestPracticesCard`: Shows best practice recommendations  
+- `DocumentInconsistenciesCard`: Lists document inconsistencies
+- `ComplianceSummaryCard`: Overview compliance summary with metrics
 
-### Importing Data
-```jsx
-import { statsData, recentReviews, menuItems } from '../data';
+### Pages
+- `ReviewResults`: Comprehensive compliance analysis results page
+- `AllReviews`: List of all reviews with navigation to detailed results
+- `Reports`: Analytics dashboard with compliance metrics and trends
+- `Dashboard`: Main overview with recent activities
 
-// Use the imported data in your components
-```
+## Usage
 
-## 🎨 Styling Guidelines
+### Viewing Compliance Results
+1. Navigate to "All Reviews" page
+2. Click "View Report" on any completed review
+3. Review the comprehensive compliance analysis with:
+   - Compliance summary with overall status
+   - Detailed mandatory issues that must be fixed
+   - Document inconsistencies to resolve
+   - Best practice recommendations for improvement
 
-- **Global Styles**: Use `styles/index.css` for global styles and Ant Design overrides
-- **Component Styles**: Use `styles/App.css` for component-specific styles
-- **Consistent Classes**: Follow the existing CSS class naming convention (e.g., `qfc-header`, `stat-card`)
+### Generating Reports
+1. Go to "Reports & Analytics" page
+2. View aggregated compliance metrics
+3. Generate monthly reports
+4. Analyze compliance trends and violation patterns
 
-## 📊 Data Management
+### Key Features
+- **Responsive Design**: Works on desktop, tablet, and mobile devices
+- **Print Support**: Optimized for printing compliance reports
+- **Export Functionality**: Download reports in various formats
+- **Real-time Updates**: Live compliance status updates
+- **Accessibility**: WCAG compliant interface
 
-### Mock Data
-All mock data is centralized in `src/data/mockData.js`:
-- `statsData` - Dashboard statistics
-- `recentReviews` - Recent review items
-- `allReviewsData` - Complete reviews table data
+## Technical Implementation
 
-### Configuration
-- `menuConfig.jsx` - Navigation menu items
-- `tableColumns.jsx` - Table column definitions
-
-## 🔧 Adding New Features
-
-### Adding a New Page
-1. Create a new file in `src/pages/NewPage.jsx`
-2. Export it from `src/pages/index.js`
-3. Add route handling in `App.jsx`
-4. Add menu item to `src/data/menuConfig.jsx`
-
-### Adding a New Component
-1. Create component in appropriate subfolder (`ui` or `layout`)
-2. Export from the subfolder's `index.js`
-3. Import and use in your pages
-
-### Adding New Data
-1. Add data to `src/data/mockData.js`
-2. Export from `src/data/index.js`
-3. Import in components that need it
-
-## 🛠️ Technologies Used
-
-- **React 19** - UI library
-- **Vite** - Build tool and dev server
+### Built With
+- **React 19** - Frontend framework
 - **Ant Design 5** - UI component library
-- **ESLint** - Code linting
+- **React Router** - Navigation and routing
+- **Vite** - Build tool and development server
 
-## 📝 Development Guidelines
+### Component Architecture
+- Modular compliance components for reusability
+- Consistent data structure across all components
+- Responsive design with mobile-first approach
+- Accessible UI with proper ARIA labels and keyboard navigation
 
-1. **Component Naming**: Use PascalCase for component files
-2. **Clean Imports**: Use index files for cleaner import statements
-3. **Single Responsibility**: Keep components focused on one task
-4. **Consistent Structure**: Follow the established folder structure
-5. **Documentation**: Comment complex logic and component props
+### Styling
+- Custom CSS for compliance-specific styling
+- Consistent color scheme for status indicators:
+  - 🔴 Red: Critical issues and violations
+  - 🟡 Yellow: Warnings and recommendations  
+  - 🟢 Green: Compliant items and success states
+  - 🔵 Blue: Information and neutral states
 
-## 🔄 Migration Notes
+## Getting Started
 
-The application has been refactored from a single 680+ line `App.jsx` file into a modular structure:
+1. **Install Dependencies**
+   ```bash
+   npm install
+   ```
 
-- **Before**: All functionality in one massive file
-- **After**: Organized into logical, maintainable modules
-- **Benefits**: Better code organization, easier testing, improved developer experience
+2. **Start Development Server**
+   ```bash
+   npm run dev
+   ```
 
-All functionality remains the same - this was purely a structural improvement for better maintainability and scalability.
+3. **Build for Production**
+   ```bash
+   npm run build
+   ```
+
+## Future Enhancements
+
+- **Real-time PDF Analysis**: Integration with PDF processing APIs
+- **Advanced Analytics**: Machine learning insights and trends
+- **Multi-language Support**: Arabic and English language options
+- **Integration APIs**: Connect with HR systems and document management
+- **Automated Notifications**: Email alerts for compliance issues
+- **Historical Tracking**: Track compliance improvements over time
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---
+
+**Qatar Financial Centre Employment Standards Office**  
+*Ensuring fair and compliant employment practices in the QFC*

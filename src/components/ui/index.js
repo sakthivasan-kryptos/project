@@ -4,3 +4,7 @@ export { default as PageHeader } from './PageHeader';
 export { default as Input } from './Input';
 export { default as Button } from './Button';
 export { default as ErrorMessage } from './ErrorMessage';
+export { default as ComplianceIssuesCard } from './ComplianceIssuesCard';
+export { default as BestPracticesCard } from './BestPracticesCard';
+export { default as DocumentInconsistenciesCard } from './DocumentInconsistenciesCard';
+export { default as ComplianceSummaryCard } from './ComplianceSummaryCard';
