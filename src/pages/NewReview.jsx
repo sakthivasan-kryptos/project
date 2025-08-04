@@ -49,7 +49,7 @@ const NewReview = () => {
       reader.onerror = (error) => reject(error);
     });
 
-    const response = await fetch('http://localhost:5000/api/upload', {
+    const response = await fetch('https://complainceanalysis-dtddbbcpeuc3h0f7.eastus2-01.azurewebsites.net/api/upload', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

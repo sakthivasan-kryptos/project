@@ -180,7 +180,7 @@ export const ComplianceProvider = ({ children }) => {
   };
 
   const getComplianceStatus = () => {
-    return state.dashboardData?.compliance_status || 'Unknown';
+    return state.dashboardData?.compliance_status || '0';
   };
 
   const getRecentReviews = (limit = 5) => {
