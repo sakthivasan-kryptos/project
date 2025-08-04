@@ -1,4 +1,5 @@
 /* QFC Employment Standards Office Styles */
+@import './compliance.css';
 
 .qfc-header {
   background: linear-gradient(135deg, #4a6cf7 0%, #3b5bdb 100%) !important;
