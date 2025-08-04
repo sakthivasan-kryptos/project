@@ -1,8 +1,9 @@
-import { Card, Table, Row, Col, Select, Input, Button } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
-import { useState } from 'react';
+import { Card, Table, Row, Col, Select, Input, Button, Tag, Alert } from 'antd';
+import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
+import { useState, useMemo } from 'react';
 import PageHeader from '../components/ui/PageHeader';
 import ReviewResults from './ReviewResults';
+import { useCompliance } from '../contexts/ComplianceContext';
 import { allReviewsData } from '../data/mockData';
 
 const { Option } = Select;
@@ -10,6 +11,15 @@ const { Option } = Select;
 const AllReviews = () => {
   const [selectedReview, setSelectedReview] = useState(null);
   const [showResults, setShowResults] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('all-statuses');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const {
+    reviewsData,
+    refreshData,
+    loading,
+    error
+  } = useCompliance();
 
   const handleViewResults = (record) => {
     setSelectedReview(record);
@@ -20,6 +30,60 @@ const AllReviews = () => {
     setShowResults(false);
     setSelectedReview(null);
   };
+
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'completed':
+      case 'compliant': 
+        return 'success';
+      case 'non-compliant': 
+        return 'error';
+      case 'partially compliant':
+      case 'needs review': 
+        return 'warning';
+      case 'in progress': 
+        return 'processing';
+      default: 
+        return 'default';
+    }
+  };
+
+  // Transform compliance reviews data to match table format
+  const transformedComplianceReviews = useMemo(() => {
+    if (!reviewsData?.reviews?.length) return [];
+    
+    return reviewsData.reviews.map((review, index) => ({
+      key: review.id || `compliance-${index}`,
+      company: review.company || 'Unknown Company',
+      email: review.metadata?.email || 'N/A',
+      documentType: review.document_type || 'Unknown Document',
+      submitted: new Date(review.timestamp).toLocaleDateString(),
+      status: review.status || 'Unknown',
+      violations: review.critical_count > 0 ? `${review.critical_count} Critical` : '0 Issues',
+      violationsColor: review.critical_count > 0 ? '#ff4d4f' : '#52c41a',
+      complianceData: review // Store full compliance data for detailed view
+    }));
+  }, [reviewsData]);
+
+  // Combined data source (compliance reviews + mock data)
+  const combinedReviewsData = useMemo(() => {
+    const complianceReviews = transformedComplianceReviews;
+    const mockReviews = allReviewsData;
+    
+    // Filter based on search term and status
+    const allReviews = [...complianceReviews, ...mockReviews];
+    
+    return allReviews.filter(review => {
+      const matchesSearch = searchTerm === '' || 
+        review.company.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        review.documentType.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus = statusFilter === 'all-statuses' || 
+        review.status.toLowerCase().replace(' ', '-') === statusFilter;
+      
+      return matchesSearch && matchesStatus;
+    });
+  }, [transformedComplianceReviews, searchTerm, statusFilter]);
 
   // Updated table columns with proper action handlers
   const allReviewsColumns = [
@@ -48,26 +112,11 @@ const AllReviews = () => {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => {
-        let color = '#52c41a';
-        if (status === 'In Progress') color = '#faad14';
-        if (status === 'Needs Review') color = '#ff4d4f';
-        
-        return (
-          <span 
-            style={{ 
-              color: color, 
-              fontWeight: 500,
-              padding: '4px 8px',
-              borderRadius: '12px',
-              backgroundColor: `${color}15`,
-              fontSize: '12px'
-            }}
-          >
-            {status}
-          </span>
-        );
-      },
+      render: (status) => (
+        <Tag color={getStatusColor(status)} style={{ fontSize: '12px' }}>
+          {status}
+        </Tag>
+      ),
     },
     {
       title: 'Violations',
@@ -130,14 +179,52 @@ const AllReviews = () => {
       <PageHeader
         title="All Reviews"
         subtitle="Manage and track all compliance reviews"
+        extra={
+          <Button 
+            icon={<ReloadOutlined />} 
+            onClick={refreshData}
+            loading={loading}
+          >
+            Refresh Data
+          </Button>
+        }
       />
+
+      {/* Error Alert */}
+      {error && (
+        <Alert
+          message="Error Loading Reviews Data"
+          description={error}
+          type="error"
+          showIcon
+          closable
+          style={{ marginBottom: '24px' }}
+        />
+      )}
+
+      {/* Show data source info */}
+      {transformedComplianceReviews.length > 0 && (
+        <Alert
+          message={`Showing ${transformedComplianceReviews.length} compliance review(s) from API responses and ${allReviewsData.length} sample reviews`}
+          type="info"
+          showIcon
+          style={{ marginBottom: '24px' }}
+        />
+      )}
 
       <div className="filters-section" style={{ marginBottom: '24px' }}>
         <Row gutter={16} align="middle">
           <Col>
-            <Select defaultValue="all-statuses" style={{ width: 150 }}>
+            <Select 
+              value={statusFilter} 
+              onChange={setStatusFilter}
+              style={{ width: 150 }}
+            >
               <Option value="all-statuses">All Statuses</Option>
               <Option value="completed">Completed</Option>
+              <Option value="compliant">Compliant</Option>
+              <Option value="non-compliant">Non-Compliant</Option>
+              <Option value="partially-compliant">Partially Compliant</Option>
               <Option value="in-progress">In Progress</Option>
               <Option value="needs-review">Needs Review</Option>
             </Select>
@@ -151,13 +238,19 @@ const AllReviews = () => {
           </Col>
           <Col flex="auto">
             <Input
-              placeholder="Search company name..."
+              placeholder="Search company name or document type..."
               prefix={<SearchOutlined />}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               style={{ maxWidth: 300 }}
             />
           </Col>
           <Col>
-            <Button type="primary" icon={<SearchOutlined />}>
+            <Button 
+              type="primary" 
+              icon={<SearchOutlined />}
+              onClick={() => {/* Search is already handled by useMemo */}}
+            >
               Search
             </Button>
           </Col>
@@ -167,9 +260,16 @@ const AllReviews = () => {
       <Card>
         <Table
           columns={allReviewsColumns}
-          dataSource={allReviewsData}
-          pagination={{ pageSize: 10 }}
+          dataSource={combinedReviewsData}
+          pagination={{ 
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) => 
+              `${range[0]}-${range[1]} of ${total} reviews`
+          }}
           className="reviews-table"
+          loading={loading}
         />
       </Card>
     </div>
