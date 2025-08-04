@@ -9,6 +9,7 @@ import {
   Spin,
   Collapse,
   List,
+  notification,
 } from 'antd';
 import {
   InboxOutlined,
@@ -25,52 +26,68 @@ const NewReview = () => {
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [parsedResult, setParsedResult] = useState(null);
 
-  const handleUpload = async (file) => {
-    if (file.type !== 'application/pdf') {
-      message.error('Only PDF files are allowed!');
-      return false;
-    }
-
-    const maxSize = 10 * 1024 * 1024;
-    if (file.size > maxSize) {
-      message.error('File size must be less than 10MB!');
-      return false;
-    }
-
-    setUploading(true);
-
-    try {
-      const pdf_url =
-        'https://inputregulationfile.blob.core.windows.net/input-doc/sample_doc_compliance.pdf?sp=r&st=2025-08-03T14:24:05Z&se=2025-08-05T22:39:05Z&sv=2024-11-04&sr=b&sig=va54HxIKcx2zyvLpdi3nW43ztPYNOV0CZwANKg5MHRk%3D';
-
-      const response = await fetch('http://localhost:5000/api/upload', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ pdf_url }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-
-      const result = await response.json();
-      const parsed = JSON.parse(result.final);
-      setParsedResult(parsed);
-      document.cookie = `lastUploadResponse=${JSON.stringify(result)}; path=/; max-age=86400`;
-      setUploadSuccess(true);
-      message.success('Upload Successfully');
-    } catch (err) {
-      console.error('Upload error:', err);
-      message.error('Upload failed. Please try again.');
-    } finally {
-      setUploading(false);
-    }
-
+ const handleUpload = async (file) => {
+  if (file.type !== 'application/pdf') {
+    message.error('Only PDF files are allowed!');
     return false;
-  };
+  }
 
+  const maxSize = 10 * 1024 * 1024;
+  if (file.size > maxSize) {
+    message.error('File size must be less than 10MB!');
+    return false;
+  }
+
+  setUploading(true);
+
+  try {
+    // Convert PDF to base64
+    const pdf_base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = (error) => reject(error);
+    });
+
+    const response = await fetch('http://localhost:5000/api/upload', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ pdf_base64 }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Upload failed');
+    }
+
+    const result = await response.json();
+    const parsed = JSON.parse(result.final);
+    setParsedResult(parsed);
+    document.cookie = `lastUploadResponse=${JSON.stringify(result)}; path=/; max-age=86400`;
+    setUploadSuccess(true);
+
+    // Show success notification
+    notification.success({
+      message: 'Upload Successful',
+      description: 'Your document has been successfully uploaded and analyzed.',
+      icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
+      placement: 'topRight',
+      duration: 4.5,
+    });
+  } catch (err) {
+    console.error('Upload error:', err);
+    notification.error({
+      message: 'Upload Failed',
+      description: 'Upload failed. Please try again.',
+      placement: 'topRight',
+    });
+  } finally {
+    setUploading(false);
+  }
+
+  return false;
+};
   const uploadProps = {
     name: 'file',
     multiple: false,
