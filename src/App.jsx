@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from 'antd';
 import { AuthProvider } from './contexts/AuthContext';
+import { ComplianceProvider } from './contexts/ComplianceContext';
 import { Header, Sidebar } from './components/layout';
 import { Dashboard, NewReview, AllReviews, Regulations, Reports, Settings, LoginPage, ReviewResults } from './pages';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -37,22 +38,24 @@ return (
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          {/* Public route - Login */}
-          <Route path="/login" element={<LoginPage />} />
-          
-          {/* Protected routes */}
-          <Route 
-            path="/*" 
-            element={
-              <ProtectedRoute>
-                <AppLayout />
-              </ProtectedRoute>
-            } 
-          />
-        </Routes>
-      </Router>
+      <ComplianceProvider>
+        <Router>
+          <Routes>
+            {/* Public route - Login */}
+            <Route path="/login" element={<LoginPage />} />
+            
+            {/* Protected routes */}
+            <Route 
+              path="/*" 
+              element={
+                <ProtectedRoute>
+                  <AppLayout />
+                </ProtectedRoute>
+              } 
+            />
+          </Routes>
+        </Router>
+      </ComplianceProvider>
     </AuthProvider>
   );
 }
