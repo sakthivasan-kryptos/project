@@ -1,15 +1,29 @@
-import { Layout, Typography, Space, Avatar, Dropdown } from 'antd';
-import { UserOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
+import { Layout, Typography, Space, Avatar, Dropdown, Modal } from 'antd';
+import { UserOutlined, LogoutOutlined, SettingOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 
 const { Header: AntHeader } = Layout;
 const { Title, Text } = Typography;
+const { confirm } = Modal;
 
 const Header = () => {
   const { user, logout } = useAuth();
 
   const handleLogout = () => {
-    logout();
+    confirm({
+      title: 'Confirm Logout',
+      icon: <ExclamationCircleOutlined />,
+      content: 'Are you sure you want to logout?',
+      okText: 'Yes, Logout',
+      cancelText: 'Cancel',
+      onOk() {
+        logout();
+      },
+      onCancel() {
+        console.log('Logout cancelled');
+        
+      },
+    });
   };
 
   const userMenuItems = [
@@ -40,9 +54,9 @@ const Header = () => {
         <div className="logo-section">
           <div className="logo-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M2 17L12 22L22 17" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M2 12L12 17L22 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M2 17L12 22L22 17" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M2 12L12 17L22 12" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
           <div className="header-text">
@@ -55,7 +69,7 @@ const Header = () => {
           </div>
         </div>
       </div>
-      
+
       <div className="header-right">
         <Space align="center">
           <div className="user-info">
@@ -68,12 +82,12 @@ const Header = () => {
               </Text>
             )}
           </div>
-          <Dropdown 
-            menu={{ items: userMenuItems }} 
+          <Dropdown
+            menu={{ items: userMenuItems }}
             placement="bottomRight"
             trigger={['click']}
           >
-            <Avatar 
+            <Avatar
               style={{ cursor: 'pointer' }}
               src="https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=40&h=40&fit=crop"
               icon={<UserOutlined />}

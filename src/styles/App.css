@@ -176,12 +176,31 @@
   background: #fafafa !important;
 }
 
+.upload-card.success-card {
+  border: 2px solid #52c41a !important;
+  background: #f6ffed !important;
+}
+
 .upload-card .ant-card-body {
   padding: 60px 40px !important;
 }
 
 .upload-area {
   text-align: center;
+}
+
+/* Upload drag and drop styles */
+.upload-card .ant-upload-drag {
+  background: transparent !important;
+  border: none !important;
+}
+
+.upload-card .ant-upload-drag:hover {
+  border-color: #4a6cf7 !important;
+}
+
+.upload-card .ant-upload-drag.ant-upload-drag-hover {
+  border-color: #4a6cf7 !important;
 }
 
 /* Filters Section */

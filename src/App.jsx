@@ -9,52 +9,9 @@ import { useAuth } from './contexts/AuthContext';
 import './styles/App.css';
 
 const { Content } = Layout;
-
-// Main app layout for authenticated routes
+// Router-based app layout 
 const AppLayout = () => {
-  const [currentPage, setCurrentPage] = React.useState('dashboard');
-
-  const handleMenuClick = (e) => {
-    setCurrentPage(e.key);
-  };
-
-  const renderContent = () => {
-    switch (currentPage) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'new-review':
-        return <NewReview />;
-      case 'all-reviews':
-        return <AllReviews />;
-      case 'regulations':
-        return <Regulations />;
-      case 'reports':
-        return <Reports />;
-      case 'settings':
-        return <Settings />;
-      default:
-        return <Dashboard />;
-    }
-  };
-
-  return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Header />
-      
-      <Layout>
-        <Sidebar currentPage={currentPage} onMenuClick={handleMenuClick} />
-        
-        <Content className="qfc-content">
-          {renderContent()}
-        </Content>
-      </Layout>
-    </Layout>
-  );
-};
-
-// Router-based app layout (for future expansion)
-const RouterAppLayout = () => {
-  return (
+return (
     <Layout style={{ minHeight: '100vh' }}>
       <Header />
       

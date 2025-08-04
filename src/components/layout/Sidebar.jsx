@@ -1,9 +1,20 @@
 import { Layout, Menu } from 'antd';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { menuItems } from '../../data/menuConfig.jsx';
 
 const { Sider } = Layout;
 
-const Sidebar = ({ currentPage, onMenuClick }) => {
+const Sidebar = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Get current page from pathname
+  const currentPage = location.pathname.slice(1) || 'dashboard';
+  
+  const handleMenuClick = (e) => {
+    navigate(`/${e.key}`);
+  };
+
   return (
     <Sider 
       width={280}
@@ -16,10 +27,10 @@ const Sidebar = ({ currentPage, onMenuClick }) => {
         mode="inline"
         items={menuItems}
         className="qfc-menu"
-        onClick={onMenuClick}
+        onClick={handleMenuClick}
       />
     </Sider>
   );
-};
+  };
 
 export default Sidebar;
