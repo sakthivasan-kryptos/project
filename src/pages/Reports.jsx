@@ -1,4 +1,4 @@
-import { Card, Row, Col, Space, Button, Progress, Typography, Divider, List, Statistic } from 'antd';
+import { Card, Row, Col, Space, Button, Progress, Typography, Divider, List, Statistic, Breadcrumb } from 'antd';
 import {
   FileTextOutlined,
   RiseOutlined,
@@ -8,7 +8,8 @@ import {
   PercentageOutlined,
   ExclamationCircleOutlined,
   CheckCircleOutlined,
-  BulbOutlined
+  BulbOutlined,
+  HomeOutlined
 } from '@ant-design/icons';
 import PageHeader from '../components/ui/PageHeader';
 import { ComplianceSummaryCard } from '../components/ui';
@@ -52,6 +53,17 @@ const Reports = () => {
 
   return (
     <div>
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb style={{ margin: '16px 0' }}>
+        <Breadcrumb.Item>
+          <HomeOutlined />
+        </Breadcrumb.Item>
+        <Breadcrumb.Item>
+          <BarChartOutlined />
+          <span style={{ marginLeft: '4px' }}>Reports</span>
+        </Breadcrumb.Item>
+      </Breadcrumb>
+
       <PageHeader
         title="Reports & Analytics"
         subtitle="Generate comprehensive compliance reports and view analytics"

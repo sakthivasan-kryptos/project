@@ -1,5 +1,5 @@
-import { Card, Table, Row, Col, Select, Input, Button, Tag, Alert } from 'antd';
-import { SearchOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Card, Table, Row, Col, Select, Input, Button, Tag, Alert, Breadcrumb } from 'antd';
+import { SearchOutlined, ReloadOutlined, HomeOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useState, useMemo } from 'react';
 import PageHeader from '../components/ui/PageHeader';
 import ReviewResults from './ReviewResults';
@@ -176,6 +176,17 @@ const AllReviews = () => {
   // Default list view
   return (
     <div>
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb style={{ margin: '16px 0' }}>
+        <Breadcrumb.Item>
+          <HomeOutlined />
+        </Breadcrumb.Item>
+        <Breadcrumb.Item>
+          <FileTextOutlined />
+          <span style={{ marginLeft: '4px' }}>All Reviews</span>
+        </Breadcrumb.Item>
+      </Breadcrumb>
+
       <PageHeader
         title="All Reviews"
         subtitle="Manage and track all compliance reviews"
