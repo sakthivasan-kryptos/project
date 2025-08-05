@@ -1,6 +1,7 @@
 import { Layout, Typography, Space, Avatar, Dropdown, Modal } from 'antd';
 import { UserOutlined, LogoutOutlined, SettingOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
+import './Header.css';
 
 const { Header: AntHeader } = Layout;
 const { Title, Text } = Typography;
@@ -26,6 +27,22 @@ const Header = () => {
     });
   };
 
+  const handleMenuClick = ({ key }) => {
+    switch (key) {
+      case 'profile':
+        console.log('Profile clicked');
+        break;
+      case 'settings':
+        console.log('Settings clicked');
+        break;
+      case 'logout':
+        handleLogout();
+        break;
+      default:
+        break;
+    }
+  };
+
   const userMenuItems = [
     {
       key: 'profile',
@@ -44,7 +61,7 @@ const Header = () => {
       key: 'logout',
       icon: <LogoutOutlined />,
       label: 'Logout',
-      onClick: handleLogout,
+      danger: true,
     },
   ];
 
@@ -83,14 +100,43 @@ const Header = () => {
             )}
           </div>
           <Dropdown
-            menu={{ items: userMenuItems }}
+            menu={{ 
+              items: userMenuItems,
+              onClick: handleMenuClick
+            }}
             placement="bottomRight"
             trigger={['click']}
+            arrow
+            overlayStyle={{
+              minWidth: '160px',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+              borderRadius: '6px',
+            }}
+            getPopupContainer={(triggerNode) => triggerNode.parentElement}
           >
             <Avatar
-              style={{ cursor: 'pointer' }}
+              style={{ 
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                border: '2px solid transparent'
+              }}
               src="https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=40&h=40&fit=crop"
               icon={<UserOutlined />}
+              onMouseEnter={(e) => {
+                e.target.style.borderColor = 'rgba(255,255,255,0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.borderColor = 'transparent';
+              }}
+              aria-label="User menu"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.target.click();
+                }
+              }}
             />
           </Dropdown>
         </Space>

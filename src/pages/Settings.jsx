@@ -1,4 +1,5 @@
-import { Card, Form, Input, Select, Typography } from 'antd';
+import { Card, Form, Input, Select, Typography, Breadcrumb } from 'antd';
+import { HomeOutlined, SettingOutlined } from '@ant-design/icons';
 import PageHeader from '../components/ui/PageHeader';
 
 const { Option } = Select;
@@ -7,6 +8,17 @@ const { Text } = Typography;
 const Settings = () => {
   return (
     <div>
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb style={{ margin: '16px 0' }}>
+        <Breadcrumb.Item>
+          <HomeOutlined />
+        </Breadcrumb.Item>
+        <Breadcrumb.Item>
+          <SettingOutlined />
+          <span style={{ marginLeft: '4px' }}>Settings</span>
+        </Breadcrumb.Item>
+      </Breadcrumb>
+
       <PageHeader
         title="Settings"
         subtitle="Configure system preferences and user settings"

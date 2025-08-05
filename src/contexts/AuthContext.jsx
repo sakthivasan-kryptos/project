@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { message } from 'antd';
 
 const AuthContext = createContext();
 
@@ -64,6 +65,9 @@ export const AuthProvider = ({ children }) => {
       if (rememberMe) {
         localStorage.setItem('auth_user', JSON.stringify(userData));
       }
+      
+      // Show success message
+      message.success('Signed in successfully.', 3);
       
       return { success: true, user: userData };
     } catch (error) {

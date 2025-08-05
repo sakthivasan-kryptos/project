@@ -1,4 +1,4 @@
-import { Card, Row, Col, Space, Button, Typography, List, Tag, Alert, Collapse, Divider } from 'antd';
+import { Card, Row, Col, Space, Button, Typography, List, Tag, Alert, Collapse, Divider, Breadcrumb } from 'antd';
 import {
   DownloadOutlined,
   MailOutlined,
@@ -8,7 +8,9 @@ import {
   CheckCircleOutlined,
   FileProtectOutlined,
   ReloadOutlined,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
+  HomeOutlined,
+  BookOutlined
 } from '@ant-design/icons';
 import PageHeader from '../components/ui/PageHeader';
 import { useCompliance } from '../contexts/ComplianceContext';
@@ -52,6 +54,17 @@ const Regulations = () => {
 
   return (
     <div>
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb style={{ margin: '16px 0' }}>
+        <Breadcrumb.Item>
+          <HomeOutlined />
+        </Breadcrumb.Item>
+        <Breadcrumb.Item>
+          <BookOutlined />
+          <span style={{ marginLeft: '4px' }}>Regulations</span>
+        </Breadcrumb.Item>
+      </Breadcrumb>
+
       <PageHeader
         title="Regulations and Reports"
         subtitle="QFC Article violations, requirements, and compliance analysis"

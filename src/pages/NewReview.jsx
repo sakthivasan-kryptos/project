@@ -10,10 +10,13 @@ import {
   Collapse,
   List,
   notification,
+  Breadcrumb,
 } from 'antd';
 import {
   InboxOutlined,
   CheckCircleOutlined,
+  HomeOutlined,
+  FileAddOutlined,
 } from '@ant-design/icons';
 import PageHeader from '../components/ui/PageHeader';
 
@@ -67,21 +70,11 @@ const NewReview = () => {
     document.cookie = `lastUploadResponse=${JSON.stringify(result)}; path=/; max-age=86400`;
     setUploadSuccess(true);
 
-    // Show success notification
-    notification.success({
-      message: 'Upload Successful',
-      description: 'Your document has been successfully uploaded and analyzed.',
-      icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
-      placement: 'topRight',
-      duration: 4.5,
-    });
+    // Show success message using Ant Design message component
+    message.success('Successfully updated.', 3);
   } catch (err) {
     console.error('Upload error:', err);
-    notification.error({
-      message: 'Upload Failed',
-      description: 'Upload failed. Please try again.',
-      placement: 'topRight',
-    });
+    message.error('Upload failed. Please try again.');
   } finally {
     setUploading(false);
   }
@@ -114,6 +107,15 @@ const NewReview = () => {
   if (uploadSuccess && parsedResult) {
     return (
       <div>
+        {/* Breadcrumb Navigation */}
+        <Breadcrumb style={{ margin: '16px 0' }}>
+          <Breadcrumb.Item>
+            <HomeOutlined />
+          </Breadcrumb.Item>
+          <Breadcrumb.Item>New Review</Breadcrumb.Item>
+          <Breadcrumb.Item>Results</Breadcrumb.Item>
+        </Breadcrumb>
+
         <PageHeader
           title="Compliance Review Results"
           subtitle="Document successfully analyzed. See results below."
@@ -187,6 +189,17 @@ const NewReview = () => {
 
   return (
     <div>
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb style={{ margin: '16px 0' }}>
+        <Breadcrumb.Item>
+          <HomeOutlined />
+        </Breadcrumb.Item>
+        <Breadcrumb.Item>
+          <FileAddOutlined />
+          <span style={{ marginLeft: '4px' }}>New Review</span>
+        </Breadcrumb.Item>
+      </Breadcrumb>
+
       <PageHeader
         title="Start New Compliance Review"
         subtitle="Upload PDF employment documents to analyze against QFC regulations"
