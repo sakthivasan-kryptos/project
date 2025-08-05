@@ -4,17 +4,34 @@
 // Parse API response and extract data for dashboard update
 export const extractDashboardData = (apiResponse) => {
   try {
-    const { compliance_summary, mandatory_compliance_issues } = apiResponse;
-    
-    if (!compliance_summary) {
-      throw new Error('Missing compliance_summary in API response');
+    // Handle the new nested JSON structure
+    let parsedData = apiResponse;
+    if (apiResponse.final && typeof apiResponse.final === 'string') {
+      parsedData = JSON.parse(apiResponse.final);
     }
 
+    const { 
+      dashboard_metrics, 
+      final_assessment, 
+      critical_gaps,
+      analysis_summary 
+    } = parsedData;
+    
     return {
-      compliance_status: compliance_summary.status || 'Unknown',
-      critical_issues: compliance_summary.critical_issues || 0,
-      must_fix_items: compliance_summary.must_fix_items || [],
-      key_issues: mandatory_compliance_issues || [],
+      compliance_status: final_assessment?.overall_compliance_status || 'Unknown',
+      compliance_rate: dashboard_metrics?.compliance_rate || '0%',
+      critical_issues: dashboard_metrics?.total_critical_gaps || critical_gaps?.count || 0,
+      reviews_this_month: dashboard_metrics?.reviews_this_month || 0,
+      avg_review_time: dashboard_metrics?.avg_review_time || '0 hrs',
+      gaps_found: dashboard_metrics?.gaps_found || 0,
+      confidence_score: final_assessment?.confidence_score || '0%',
+      risk_level: final_assessment?.risk_level || 'Unknown',
+      next_review_date: final_assessment?.next_review_date || null,
+      executive_summary: final_assessment?.executive_summary || '',
+      document_type: analysis_summary?.document_type || 'Unknown',
+      company_name: analysis_summary?.company_name || 'Not specified',
+      analysis_date: analysis_summary?.analysis_date || new Date().toISOString().split('T')[0],
+      overall_status: analysis_summary?.overall_status || 'Pending',
       last_updated: new Date().toISOString()
     };
   } catch (error) {
@@ -26,25 +43,46 @@ export const extractDashboardData = (apiResponse) => {
 // Parse API response and extract data for All-Reviews section
 export const extractReviewsData = (apiResponse, metadata = {}) => {
   try {
+    // Handle the new nested JSON structure
+    let parsedData = apiResponse;
+    if (apiResponse.final && typeof apiResponse.final === 'string') {
+      parsedData = JSON.parse(apiResponse.final);
+    }
+
     const {
-      compliance_summary,
-      mandatory_compliance_issues,
-      best_practice_recommendations,
-      document_inconsistencies
-    } = apiResponse;
+      analysis_summary,
+      critical_gaps,
+      recommendations,
+      inconsistencies,
+      compliant_items,
+      final_assessment,
+      dashboard_metrics
+    } = parsedData;
 
     const reviewEntry = {
       id: `review_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       timestamp: new Date().toISOString(),
-      company: metadata.company || 'Unknown Company',
-      document_type: metadata.document_type || 'Unknown Document',
-      compliance_issues: mandatory_compliance_issues || [],
-      best_practices: best_practice_recommendations || [],
-      inconsistencies: document_inconsistencies || [],
-      compliance_summary: compliance_summary || {},
-      status: compliance_summary?.status || 'Unknown',
-      critical_count: compliance_summary?.critical_issues || 0,
-      metadata
+      company: analysis_summary?.company_name || metadata.company || 'Unknown Company',
+      document_type: analysis_summary?.document_type || metadata.document_type || 'Unknown Document',
+      critical_gaps: critical_gaps?.items || [],
+      recommendations: recommendations?.items || [],
+      inconsistencies: inconsistencies?.items || [],
+      compliant_items: compliant_items?.items || [],
+      final_assessment: final_assessment || {},
+      dashboard_metrics: dashboard_metrics || {},
+      analysis_summary: analysis_summary || {},
+      status: final_assessment?.overall_compliance_status || 'Unknown',
+      critical_count: critical_gaps?.count || 0,
+      recommendations_count: recommendations?.count || 0,
+      inconsistencies_count: inconsistencies?.count || 0,
+      compliant_areas_count: compliant_items?.count || 0,
+      confidence_score: final_assessment?.confidence_score || '0%',
+      risk_level: final_assessment?.risk_level || 'Unknown',
+      metadata: {
+        ...metadata,
+        analysis_date: analysis_summary?.analysis_date,
+        overall_status: analysis_summary?.overall_status
+      }
     };
 
     return [reviewEntry];
@@ -57,23 +95,31 @@ export const extractReviewsData = (apiResponse, metadata = {}) => {
 // Parse API response and extract data for Regulations and Reports
 export const extractRegulationsData = (apiResponse) => {
   try {
-    const { mandatory_compliance_issues } = apiResponse;
+    // Handle the new nested JSON structure
+    let parsedData = apiResponse;
+    if (apiResponse.final && typeof apiResponse.final === 'string') {
+      parsedData = JSON.parse(apiResponse.final);
+    }
+
+    const { critical_gaps, action_plan } = parsedData;
     
-    if (!mandatory_compliance_issues || !Array.isArray(mandatory_compliance_issues)) {
-      return { violations: [], articles: {} };
+    if (!critical_gaps?.items || !Array.isArray(critical_gaps.items)) {
+      return { violations: [], articles: {}, action_plan: {} };
     }
 
     const violations = [];
     const articles = {};
 
-    mandatory_compliance_issues.forEach((issue, index) => {
+    critical_gaps.items.forEach((gap, index) => {
       const violation = {
         id: `violation_${Date.now()}_${index}`,
-        article: issue.qfc_article || 'Unknown Article',
-        violation: issue.violation || 'Unknown Violation',
-        required: issue.qfc_requires || 'Unknown Requirement',
-        fix_required: issue.fix_required || 'No fix specified',
-        severity: issue.severity || 'Unknown',
+        article: gap.qfc_article || 'Unknown Article',
+        gap_type: gap.gap_type || 'Unknown Gap',
+        violation: gap.document_states || 'Unknown State',
+        required: gap.qfc_requires || 'Unknown Requirement',
+        fix_required: gap.immediate_action || 'No fix specified',
+        severity: gap.severity || 'Unknown',
+        legal_risk: gap.legal_risk || 'Unknown',
         timestamp: new Date().toISOString()
       };
 
@@ -90,6 +136,8 @@ export const extractRegulationsData = (apiResponse) => {
     return {
       violations,
       articles,
+      action_plan: action_plan || {},
+      critical_gaps_count: critical_gaps.count || 0,
       last_updated: new Date().toISOString()
     };
   } catch (error) {
@@ -101,21 +149,38 @@ export const extractRegulationsData = (apiResponse) => {
 // Parse API response and extract comprehensive compliance data
 export const extractComplianceData = (apiResponse) => {
   try {
+    // Handle the new nested JSON structure
+    let parsedData = apiResponse;
+    if (apiResponse.final && typeof apiResponse.final === 'string') {
+      parsedData = JSON.parse(apiResponse.final);
+    }
+
     const {
-      compliance_summary,
-      mandatory_compliance_issues,
-      best_practice_recommendations,
-      document_inconsistencies
-    } = apiResponse;
+      analysis_summary,
+      critical_gaps,
+      recommendations,
+      inconsistencies,
+      compliant_items,
+      dashboard_metrics,
+      action_plan,
+      final_assessment
+    } = parsedData;
 
     return {
-      summary: compliance_summary || {},
-      mandatory_issues: mandatory_compliance_issues || [],
-      recommendations: best_practice_recommendations || [],
-      inconsistencies: document_inconsistencies || [],
-      total_issues: (mandatory_compliance_issues || []).length,
-      critical_issues: compliance_summary?.critical_issues || 0,
-      status: compliance_summary?.status || 'Unknown',
+      analysis_summary: analysis_summary || {},
+      critical_gaps: critical_gaps || { count: 0, items: [] },
+      recommendations: recommendations || { count: 0, items: [] },
+      inconsistencies: inconsistencies || { count: 0, items: [] },
+      compliant_items: compliant_items || { count: 0, items: [] },
+      dashboard_metrics: dashboard_metrics || {},
+      action_plan: action_plan || {},
+      final_assessment: final_assessment || {},
+      total_issues: (critical_gaps?.count || 0) + (inconsistencies?.count || 0),
+      critical_issues: critical_gaps?.count || 0,
+      status: final_assessment?.overall_compliance_status || 'Unknown',
+      confidence_score: final_assessment?.confidence_score || '0%',
+      risk_level: final_assessment?.risk_level || 'Unknown',
+      executive_summary: final_assessment?.executive_summary || '',
       last_updated: new Date().toISOString()
     };
   } catch (error) {
@@ -126,57 +191,101 @@ export const extractComplianceData = (apiResponse) => {
 
 // Validate API response structure
 export const validateApiResponse = (apiResponse) => {
-  const requiredFields = [
-    'compliance_summary',
-    'mandatory_compliance_issues'
-  ];
+  try {
+    // Handle the new nested JSON structure
+    let parsedData = apiResponse;
+    if (apiResponse.final && typeof apiResponse.final === 'string') {
+      parsedData = JSON.parse(apiResponse.final);
+    }
 
-  const missingFields = requiredFields.filter(field => !(field in apiResponse));
-  
-  if (missingFields.length > 0) {
-    throw new Error(`Missing required fields in API response: ${missingFields.join(', ')}`);
+    const requiredFields = [
+      'analysis_summary',
+      'critical_gaps',
+      'final_assessment'
+    ];
+
+    const missingFields = requiredFields.filter(field => !(field in parsedData));
+    
+    if (missingFields.length > 0) {
+      throw new Error(`Missing required fields in API response: ${missingFields.join(', ')}`);
+    }
+
+    // Validate analysis_summary structure
+    if (parsedData.analysis_summary && typeof parsedData.analysis_summary !== 'object') {
+      throw new Error('analysis_summary must be an object');
+    }
+
+    // Validate critical_gaps structure
+    if (parsedData.critical_gaps && typeof parsedData.critical_gaps !== 'object') {
+      throw new Error('critical_gaps must be an object');
+    }
+
+    // Validate final_assessment structure
+    if (parsedData.final_assessment && typeof parsedData.final_assessment !== 'object') {
+      throw new Error('final_assessment must be an object');
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error validating API response:', error);
+    throw new Error(`Failed to validate API response: ${error.message}`);
   }
-
-  // Validate compliance_summary structure
-  if (apiResponse.compliance_summary && typeof apiResponse.compliance_summary !== 'object') {
-    throw new Error('compliance_summary must be an object');
-  }
-
-  // Validate mandatory_compliance_issues structure
-  if (apiResponse.mandatory_compliance_issues && !Array.isArray(apiResponse.mandatory_compliance_issues)) {
-    throw new Error('mandatory_compliance_issues must be an array');
-  }
-
-  return true;
 };
 
 // Handle null or missing fields gracefully
 export const sanitizeApiResponse = (apiResponse) => {
   try {
+    // Handle the new nested JSON structure
+    let parsedData = apiResponse;
+    if (apiResponse.final && typeof apiResponse.final === 'string') {
+      parsedData = JSON.parse(apiResponse.final);
+    }
+
     const sanitized = {
-      compliance_summary: apiResponse.compliance_summary || {},
-      mandatory_compliance_issues: apiResponse.mandatory_compliance_issues || [],
-      best_practice_recommendations: apiResponse.best_practice_recommendations || [],
-      document_inconsistencies: apiResponse.document_inconsistencies || []
+      analysis_summary: parsedData.analysis_summary || {},
+      critical_gaps: parsedData.critical_gaps || { count: 0, items: [] },
+      recommendations: parsedData.recommendations || { count: 0, items: [] },
+      inconsistencies: parsedData.inconsistencies || { count: 0, items: [] },
+      compliant_items: parsedData.compliant_items || { count: 0, items: [] },
+      dashboard_metrics: parsedData.dashboard_metrics || {},
+      action_plan: parsedData.action_plan || {},
+      final_assessment: parsedData.final_assessment || {}
     };
 
-    // Ensure compliance_summary has required structure
-    sanitized.compliance_summary = {
-      status: sanitized.compliance_summary.status || 'Unknown',
-      critical_issues: sanitized.compliance_summary.critical_issues || 0,
-      must_fix_items: sanitized.compliance_summary.must_fix_items || [],
-      ...sanitized.compliance_summary
+    // Ensure analysis_summary has required structure
+    sanitized.analysis_summary = {
+      document_type: sanitized.analysis_summary.document_type || 'Unknown Document',
+      company_name: sanitized.analysis_summary.company_name || 'Not specified',
+      analysis_date: sanitized.analysis_summary.analysis_date || new Date().toISOString().split('T')[0],
+      overall_status: sanitized.analysis_summary.overall_status || 'Pending',
+      ...sanitized.analysis_summary
     };
 
-    // Ensure mandatory_compliance_issues have required structure
-    sanitized.mandatory_compliance_issues = sanitized.mandatory_compliance_issues.map((issue, index) => ({
-      qfc_article: issue?.qfc_article || `Unknown Article ${index + 1}`,
-      violation: issue?.violation || 'Unknown Violation',
-      qfc_requires: issue?.qfc_requires || 'Unknown Requirement',
-      fix_required: issue?.fix_required || 'No fix specified',
-      severity: issue?.severity || 'Unknown',
-      ...issue
-    }));
+    // Ensure critical_gaps have required structure
+    sanitized.critical_gaps = {
+      count: sanitized.critical_gaps.count || 0,
+      description: sanitized.critical_gaps.description || 'Critical compliance issues',
+      items: (sanitized.critical_gaps.items || []).map((gap, index) => ({
+        gap_type: gap?.gap_type || `Gap ${index + 1}`,
+        severity: gap?.severity || 'Unknown',
+        qfc_article: gap?.qfc_article || 'Unknown Article',
+        document_states: gap?.document_states || 'Unknown State',
+        qfc_requires: gap?.qfc_requires || 'Unknown Requirement',
+        immediate_action: gap?.immediate_action || 'No action specified',
+        legal_risk: gap?.legal_risk || 'Unknown',
+        ...gap
+      }))
+    };
+
+    // Ensure final_assessment has required structure
+    sanitized.final_assessment = {
+      overall_compliance_status: sanitized.final_assessment.overall_compliance_status || 'Unknown',
+      confidence_score: sanitized.final_assessment.confidence_score || '0%',
+      risk_level: sanitized.final_assessment.risk_level || 'Unknown',
+      next_review_date: sanitized.final_assessment.next_review_date || null,
+      executive_summary: sanitized.final_assessment.executive_summary || '',
+      ...sanitized.final_assessment
+    };
 
     return sanitized;
   } catch (error) {
@@ -185,66 +294,113 @@ export const sanitizeApiResponse = (apiResponse) => {
   }
 };
 
-// Create mock API response for testing
+// Create mock API response for testing - updated to new format
 export const createMockApiResponse = () => {
   return {
-    compliance_summary: {
-      status: "Non-Compliant",
-      critical_issues: 5,
-      must_fix_items: [
-        "Reduce probation period to maximum 3 months",
-        "Increase annual leave to 20 working days",
-        "Add overtime pay clause at 125%",
-        "Update sick leave policy to comply with QFC standards",
-        "Revise termination notice requirements"
-      ]
-    },
-    mandatory_compliance_issues: [
-      {
-        qfc_article: "Article 18",
-        violation: "Probation period exceeds maximum allowed",
-        qfc_requires: "Maximum probation period of 3 months",
-        fix_required: "Reduce probation period from 6 months to 3 months",
-        severity: "Critical"
+    final: JSON.stringify({
+      analysis_summary: {
+        document_type: "Employment Contract & HR Manual",
+        company_name: "Test Company",
+        analysis_date: "2024-06-13",
+        overall_status: "Completed"
       },
-      {
-        qfc_article: "Article 23",
-        violation: "Insufficient annual leave provision",
-        qfc_requires: "Minimum 20 working days annual leave",
-        fix_required: "Increase annual leave from 15 to 20 working days",
-        severity: "Critical"
+      critical_gaps: {
+        count: 5,
+        description: "Mandatory compliance issues that require immediate attention",
+        items: [
+          {
+            gap_type: "Probation Period Gap",
+            severity: "Critical",
+            qfc_article: "Article 18",
+            document_states: "The first six (6) months of employment will be considered a probationary period.",
+            qfc_requires: "A probationary period must not exceed 3 months from the date employment commences.",
+            immediate_action: "Amend the probationary period to a maximum of 3 months.",
+            legal_risk: "High"
+          },
+          {
+            gap_type: "Annual Leave Entitlement Gap",
+            severity: "Critical",
+            qfc_article: "Article 33",
+            document_states: "Employees are entitled to 15 working days of annual leave per year.",
+            qfc_requires: "Employees must receive at least 20 working days of annual leave per year.",
+            immediate_action: "Increase annual leave entitlement to at least 20 working days per year.",
+            legal_risk: "High"
+          }
+        ]
       },
-      {
-        qfc_article: "Article 45",
-        violation: "Missing overtime compensation clause",
-        qfc_requires: "Overtime pay at minimum 125% of regular rate",
-        fix_required: "Add overtime compensation clause with 125% rate",
-        severity: "High"
+      recommendations: {
+        count: 4,
+        description: "Best practice improvements suggested",
+        items: [
+          {
+            area: "Contract Requirements",
+            priority: "High",
+            current_practice: "Contract refers to HR Manual for certain terms and omits some statutory minimums.",
+            recommended_change: "Include all legally required minimum entitlements directly in the contract.",
+            business_benefit: "Reduces ambiguity and ensures employees are fully informed of their legal rights.",
+            implementation_effort: "Easy"
+          }
+        ]
+      },
+      inconsistencies: {
+        count: 3,
+        description: "Internal document conflicts found",
+        items: [
+          {
+            conflict_area: "Reference to HR Manual vs. Contract Minimums",
+            conflicting_statements: [
+              "Sick leave provisions are detailed in the HR Manual.",
+              "Contract does not specify statutory minimum sick leave entitlements."
+            ],
+            operational_risk: "Employees may be unaware of legal minimums, leading to disputes or claims.",
+            recommended_resolution: "Summarize all statutory minimums in the contract.",
+            priority: "High"
+          }
+        ]
+      },
+      compliant_items: {
+        count: 2,
+        description: "Areas meeting QFC standards",
+        items: [
+          {
+            compliance_area: "Salary Payment Frequency",
+            qfc_article: "Article 26",
+            evidence: "Standard QFC contracts require salary to be paid monthly. No evidence of non-compliance found.",
+            strength: "Ensures employees are regularly compensated in accordance with QFC law."
+          }
+        ]
+      },
+      dashboard_metrics: {
+        reviews_this_month: 23,
+        compliance_rate: "89%",
+        gaps_found: 156,
+        avg_review_time: "2.3 hrs",
+        total_critical_gaps: 5,
+        total_recommendations: 4,
+        total_inconsistencies: 3,
+        total_compliant_areas: 2
+      },
+      action_plan: {
+        immediate_actions: [
+          "Reduce probation period to a maximum of 3 months.",
+          "Increase annual leave entitlement to at least 20 working days per year."
+        ],
+        short_term_improvements: [
+          "Explicitly state sick leave entitlement of at least 60 working days per year in the contract.",
+          "Add an overtime clause specifying pay at 125% of the normal hourly rate."
+        ],
+        long_term_enhancements: [
+          "Include all statutory minimums directly in the contract.",
+          "Implement structured performance management procedures."
+        ]
+      },
+      final_assessment: {
+        overall_compliance_status: "Non-Compliant",
+        confidence_score: "96%",
+        risk_level: "High",
+        next_review_date: "2024-09-13",
+        executive_summary: "The employment contract contains several critical non-compliance issues with QFC regulations. Immediate remediation is required to avoid legal exposure."
       }
-    ],
-    best_practice_recommendations: [
-      {
-        area: "Employee Benefits",
-        recommendation: "Consider adding health insurance coverage",
-        impact: "Improved employee satisfaction and retention"
-      },
-      {
-        area: "Performance Management",
-        recommendation: "Implement structured performance review process",
-        impact: "Better employee development and career progression"
-      }
-    ],
-    document_inconsistencies: [
-      {
-        issue: "Conflicting sick leave policies",
-        description: "HR Manual states 10 days, Employment Contract states 7 days",
-        suggested_solution: "Standardize to 10 days across all documents"
-      },
-      {
-        issue: "Inconsistent termination notice periods",
-        description: "Different notice periods specified in different sections",
-        suggested_solution: "Align all references to 30 days notice period"
-      }
-    ]
+    })
   };
 };
