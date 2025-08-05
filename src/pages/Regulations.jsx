@@ -1,4 +1,4 @@
-import { Card, Row, Col, Space, Button, Typography, List, Tag, Alert, Collapse, Divider, Breadcrumb, Statistic, Badge, Tooltip } from 'antd';
+import { Card, Row, Col, Space, Button, Typography, List, Tag, Alert, Collapse } from 'antd';
 import {
   DownloadOutlined,
   MailOutlined,
@@ -9,67 +9,33 @@ import {
   FileProtectOutlined,
   ReloadOutlined,
   ExclamationCircleOutlined,
-  HomeOutlined,
-  BookOutlined,
-  ClockCircleOutlined,
-  InfoCircleOutlined
 } from '@ant-design/icons';
 import PageHeader from '../components/ui/PageHeader';
 import { useCompliance } from '../contexts/ComplianceContext';
-import { useEffect, useState } from 'react';
-import { getLatestComprehensiveResponse, getComplianceData, getRegulationsData } from '../services/localStorageService';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { Panel } = Collapse;
 
 const Regulations = () => {
   const {
-    regulationsData,
-    complianceData,
+    documentAnalysis,
     getAllViolations,
     getViolationsByArticle,
+    getRecommendations,
+    getInconsistencies,
+    getActionPlan,
+    getFinalAssessment,
     refreshData,
     loading,
     error
   } = useCompliance();
 
-  const [comprehensiveData, setComprehensiveData] = useState(null);
-  const [enhancedRegulationsData, setEnhancedRegulationsData] = useState(null);
-
-  // Load comprehensive regulations data
-  useEffect(() => {
-    const loadComprehensiveData = () => {
-      try {
-        const latestResponse = getLatestComprehensiveResponse();
-        const storedComplianceData = getComplianceData();
-        const storedRegulationsData = getRegulationsData();
-        
-        if (latestResponse?.data) {
-          setComprehensiveData(latestResponse.data);
-        }
-        
-        if (storedRegulationsData) {
-          setEnhancedRegulationsData(storedRegulationsData);
-        }
-      } catch (error) {
-        console.error('Error loading comprehensive data:', error);
-      }
-    };
-
-    loadComprehensiveData();
-  }, []);
-
   const violations = getAllViolations();
   const violationsByArticle = getViolationsByArticle();
-  const recommendations = complianceData?.recommendations || [];
-  const inconsistencies = complianceData?.inconsistencies || [];
-
-  // Get comprehensive data or fallback to existing data
-  const criticalGaps = comprehensiveData?.critical_gaps || { count: 0, items: [] };
-  const actionPlan = comprehensiveData?.action_plan || {};
-  const complianceRecommendations = comprehensiveData?.recommendations || { count: 0, items: [] };
-  const documentInconsistencies = comprehensiveData?.inconsistencies || { count: 0, items: [] };
-  const compliantItems = comprehensiveData?.compliant_items || { count: 0, items: [] };
+  const recommendations = getRecommendations();
+  const inconsistencies = getInconsistencies();
+  const actionPlan = getActionPlan();
+  const finalAssessment = getFinalAssessment();
 
   const getSeverityColor = (severity) => {
     switch (severity?.toLowerCase()) {
@@ -89,45 +55,23 @@ const Regulations = () => {
     }
   };
 
-  const getPriorityColor = (priority) => {
+  const getPriorityIcon = (priority) => {
     switch (priority?.toLowerCase()) {
-      case 'high': return 'error';
-      case 'medium': return 'warning';
-      case 'low': return 'success';
-      default: return 'default';
+      case 'high': return <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />;
+      case 'medium': return <WarningOutlined style={{ color: '#faad14' }} />;
+      default: return <CheckCircleOutlined style={{ color: '#52c41a' }} />;
     }
   };
 
-  // Group critical gaps by QFC article
-  const groupedCriticalGaps = criticalGaps.items?.reduce((acc, gap) => {
-    const article = gap.qfc_article || 'Unknown Article';
-    if (!acc[article]) {
-      acc[article] = [];
-    }
-    acc[article].push(gap);
-    return acc;
-  }, {}) || {};
-
   return (
     <div>
-      {/* Breadcrumb Navigation */}
-      <Breadcrumb style={{ margin: '16px 0' }}>
-        <Breadcrumb.Item>
-          <HomeOutlined />
-        </Breadcrumb.Item>
-        <Breadcrumb.Item>
-          <BookOutlined />
-          <span style={{ marginLeft: '4px' }}>Regulations</span>
-        </Breadcrumb.Item>
-      </Breadcrumb>
-
       <PageHeader
-        title="Regulations and Reports"
-        subtitle="QFC Article violations, requirements, and compliance analysis"
+        title="Regulations and Compliance Analysis"
+        subtitle={`QFC Article violations and compliance status: ${finalAssessment.overall_compliance_status || 'Not Available'}`}
         extra={
           <Space>
-            <Button 
-              icon={<ReloadOutlined />} 
+            <Button
+              icon={<ReloadOutlined />}
               onClick={refreshData}
               loading={loading}
             >
@@ -149,7 +93,7 @@ const Regulations = () => {
       {/* Error Alert */}
       {error && (
         <Alert
-          message="Error Loading Regulations Data"
+          message="Error Loading Compliance Data"
           description={error}
           type="error"
           showIcon
@@ -158,112 +102,138 @@ const Regulations = () => {
         />
       )}
 
-      {/* Comprehensive Analysis Summary */}
-      {comprehensiveData && (
-        <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
-          <Col xs={24} sm={6}>
-            <Card size="small">
-              <Statistic
-                title="Critical Gaps"
-                value={criticalGaps.count}
-                valueStyle={{ color: '#ff4d4f' }}
-                prefix={<ExclamationCircleOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={6}>
-            <Card size="small">
-              <Statistic
-                title="QFC Articles Affected"
-                value={Object.keys(groupedCriticalGaps).length}
-                valueStyle={{ color: '#faad14' }}
-                prefix={<BookOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={6}>
-            <Card size="small">
-              <Statistic
-                title="Immediate Actions"
-                value={actionPlan.immediate_actions?.length || 0}
-                valueStyle={{ color: '#ff4d4f' }}
-                prefix={<ClockCircleOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={6}>
-            <Card size="small">
-              <Statistic
-                title="Compliant Areas"
-                value={compliantItems.count}
-                valueStyle={{ color: '#52c41a' }}
-                prefix={<CheckCircleOutlined />}
-              />
-            </Card>
-          </Col>
-        </Row>
-      )}
+      {/* Summary Cards */}
+      <Row gutter={[24, 24]} style={{ marginBottom: '40px' }}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className="analysis-card critical">
+            <div className="analysis-content">
+              <WarningOutlined style={{ fontSize: '24px', color: '#ff4d4f', marginBottom: '12px' }} />
+              <Title level={4} style={{ color: '#ff4d4f', margin: 0 }}>Critical Gaps</Title>
+              <div className="analysis-number">
+                {documentAnalysis?.critical_gaps?.count || 0}
+              </div>
+              <Text style={{ color: '#666', fontSize: '14px' }}>
+                {documentAnalysis?.critical_gaps?.description || 'Mandatory compliance issues'}
+              </Text>
+            </div>
+          </Card>
+        </Col>
 
-      {/* Critical Gaps by QFC Article */}
-      {Object.keys(groupedCriticalGaps).length > 0 && (
-        <Card 
+        <Col xs={24} sm={12} lg={6}>
+          <Card className="analysis-card recommendations">
+            <div className="analysis-content">
+              <BulbOutlined style={{ fontSize: '24px', color: '#faad14', marginBottom: '12px' }} />
+              <Title level={4} style={{ color: '#faad14', margin: 0 }}>Recommendations</Title>
+              <div className="analysis-number">{documentAnalysis?.recommendations?.count || 0}</div>
+              <Text style={{ color: '#666', fontSize: '14px' }}>
+                {documentAnalysis?.recommendations?.description || 'Best practice improvements'}
+              </Text>
+            </div>
+          </Card>
+        </Col>
+
+        <Col xs={24} sm={12} lg={6}>
+          <Card className="analysis-card inconsistencies">
+            <div className="analysis-content">
+              <FileProtectOutlined style={{ fontSize: '24px', color: '#1890ff', marginBottom: '12px' }} />
+              <Title level={4} style={{ color: '#1890ff', margin: 0 }}>Inconsistencies</Title>
+              <div className="analysis-number">{documentAnalysis?.inconsistencies?.count || 0}</div>
+              <Text style={{ color: '#666', fontSize: '14px' }}>
+                {documentAnalysis?.inconsistencies?.description || 'Internal document conflicts'}
+              </Text>
+            </div>
+          </Card>
+        </Col>
+
+        <Col xs={24} sm={12} lg={6}>
+          <Card className="analysis-card compliant">
+            <div className="analysis-content">
+              <CheckCircleOutlined style={{ fontSize: '24px', color: '#52c41a', marginBottom: '12px' }} />
+              <Title level={4} style={{ color: '#52c41a', margin: 0 }}>Compliance Status</Title>
+              <div className="analysis-number">
+                {finalAssessment.overall_compliance_status || 'N/A'}
+              </div>
+              <Text style={{ color: '#666', fontSize: '14px' }}>
+                Confidence: {finalAssessment.confidence_score || '0%'}
+              </Text>
+            </div>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Final Assessment */}
+      {finalAssessment.executive_summary && (
+        <Card
           title={
-            <span>
-              <ExclamationCircleOutlined style={{ color: '#ff4d4f', marginRight: '8px' }} />
-              Critical Gaps by QFC Article ({criticalGaps.count})
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FileProtectOutlined />
+              Executive Summary
+            </div>
           }
           style={{ marginBottom: '24px' }}
         >
-          <Text style={{ color: '#8c8c8c', marginBottom: '16px', display: 'block' }}>
-            {criticalGaps.description}
-          </Text>
-          
-          <Collapse defaultActiveKey={Object.keys(groupedCriticalGaps).slice(0, 3)}>
-            {Object.entries(groupedCriticalGaps).map(([article, gaps]) => (
-              <Panel 
+          <Text>{finalAssessment.executive_summary}</Text>
+          <div style={{ marginTop: '16px' }}>
+            <Tag color={finalAssessment.risk_level === 'High' ? 'error' : 'warning'}>
+              Risk Level: {finalAssessment.risk_level || 'Unknown'}
+            </Tag>
+            <Tag color="processing" style={{ marginLeft: '8px' }}>
+              Next Review: {finalAssessment.next_review_date || 'Not specified'}
+            </Tag>
+          </div>
+        </Card>
+      )}
+
+      {/* Critical Compliance Gaps */}
+      {violations.length > 0 && (
+        <Card
+          title={
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FileProtectOutlined style={{ color: '#ff4d4f' }} />
+              Critical Compliance Gaps
+            </div>
+          }
+          style={{ marginBottom: '24px' }}
+        >
+          <Collapse ghost>
+            {Object.entries(violationsByArticle).map(([article, articleViolations]) => (
+              <Panel
                 header={
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 'bold' }}>{article}</span>
-                    <Badge count={gaps.length} style={{ backgroundColor: '#ff4d4f' }} />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                    <Text strong>{article}</Text>
+                    <Tag color="blue">{articleViolations.length} issue{articleViolations.length !== 1 ? 's' : ''}</Tag>
                   </div>
-                } 
+                }
                 key={article}
               >
                 <List
-                  dataSource={gaps}
-                  renderItem={(gap) => (
+                  dataSource={articleViolations}
+                  renderItem={(violation) => (
                     <List.Item>
-                      <Card size="small" style={{ width: '100%' }}>
-                        <Row gutter={[16, 8]}>
-                          <Col xs={24}>
-                            <Space>
-                              {getSeverityIcon(gap.severity)}
-                              <Text strong>{gap.gap_type}</Text>
-                              <Tag color={getSeverityColor(gap.severity)}>{gap.severity}</Tag>
-                              {gap.legal_risk && <Tag color="volcano">Risk: {gap.legal_risk}</Tag>}
-                            </Space>
-                          </Col>
-                          <Col xs={24}>
-                            <Paragraph style={{ margin: 0 }}>
-                              <Text strong>Current State: </Text>
-                              <Text>{gap.document_states}</Text>
-                            </Paragraph>
-                          </Col>
-                          <Col xs={24}>
-                            <Paragraph style={{ margin: 0 }}>
-                              <Text strong>QFC Requires: </Text>
-                              <Text style={{ color: '#1890ff' }}>{gap.qfc_requires}</Text>
-                            </Paragraph>
-                          </Col>
-                          <Col xs={24}>
-                            <Paragraph style={{ margin: 0 }}>
-                              <Text strong>Immediate Action: </Text>
-                              <Text style={{ color: '#ff4d4f', fontWeight: '500' }}>{gap.immediate_action}</Text>
-                            </Paragraph>
-                          </Col>
-                        </Row>
-                      </Card>
+                      <List.Item.Meta
+                        avatar={getSeverityIcon(violation.severity)}
+                        title={
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Text strong>{violation.gap_type}</Text>
+                            <Tag color={getSeverityColor(violation.severity)} size="small">
+                              {violation.severity || 'Unknown'}
+                            </Tag>
+                          </div>
+                        }
+                        description={
+                          <div>
+                            <Text style={{ color: '#666', marginBottom: '8px', display: 'block' }}>
+                              <strong>Document States:</strong> {violation.document_states}
+                            </Text>
+                            <Text style={{ marginBottom: '8px', display: 'block' }}>
+                              <strong>QFC Requires:</strong> {violation.qfc_requires}
+                            </Text>
+                            <Text style={{ color: '#ff4d4f' }}>
+                              <strong>Immediate Action:</strong> {violation.immediate_action}
+                            </Text>
+                          </div>
+                        }
+                      />
                     </List.Item>
                   )}
                 />
@@ -273,353 +243,154 @@ const Regulations = () => {
         </Card>
       )}
 
-      {/* Action Plan */}
-      {(actionPlan.immediate_actions?.length > 0 || actionPlan.short_term_improvements?.length > 0 || actionPlan.long_term_enhancements?.length > 0) && (
-        <Card 
+      {/* Best Practice Recommendations */}
+      {recommendations.length > 0 && (
+        <Card
           title={
-            <span>
-              <ClockCircleOutlined style={{ color: '#1890ff', marginRight: '8px' }} />
-              Regulatory Action Plan
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <BulbOutlined style={{ color: '#faad14' }} />
+              Best Practice Recommendations
+            </div>
           }
           style={{ marginBottom: '24px' }}
         >
-          <Row gutter={[24, 24]}>
-            {actionPlan.immediate_actions?.length > 0 && (
-              <Col xs={24} lg={8}>
-                <Card 
-                  size="small" 
-                  title={
-                    <span>
-                      <ExclamationCircleOutlined style={{ color: '#ff4d4f', marginRight: '8px' }} />
-                      Immediate Actions
-                      <Badge count={actionPlan.immediate_actions.length} style={{ backgroundColor: '#ff4d4f', marginLeft: '8px' }} />
-                    </span>
-                  }
-                  headStyle={{ backgroundColor: '#fff2f0' }}
-                >
-                  <List
-                    size="small"
-                    dataSource={actionPlan.immediate_actions}
-                    renderItem={(action, index) => (
-                      <List.Item style={{ padding: '8px 0' }}>
-                        <div>
-                          <ExclamationCircleOutlined style={{ color: '#ff4d4f', marginRight: '8px' }} />
-                          <Text style={{ fontSize: '13px' }}>{action}</Text>
-                        </div>
-                      </List.Item>
-                    )}
-                  />
-                </Card>
-              </Col>
-            )}
-
-            {actionPlan.short_term_improvements?.length > 0 && (
-              <Col xs={24} lg={8}>
-                <Card 
-                  size="small" 
-                  title={
-                    <span>
-                      <WarningOutlined style={{ color: '#faad14', marginRight: '8px' }} />
-                      Short-term Improvements
-                      <Badge count={actionPlan.short_term_improvements.length} style={{ backgroundColor: '#faad14', marginLeft: '8px' }} />
-                    </span>
-                  }
-                  headStyle={{ backgroundColor: '#fffbe6' }}
-                >
-                  <List
-                    size="small"
-                    dataSource={actionPlan.short_term_improvements}
-                    renderItem={(action, index) => (
-                      <List.Item style={{ padding: '8px 0' }}>
-                        <div>
-                          <WarningOutlined style={{ color: '#faad14', marginRight: '8px' }} />
-                          <Text style={{ fontSize: '13px' }}>{action}</Text>
-                        </div>
-                      </List.Item>
-                    )}
-                  />
-                </Card>
-              </Col>
-            )}
-
-            {actionPlan.long_term_enhancements?.length > 0 && (
-              <Col xs={24} lg={8}>
-                <Card 
-                  size="small" 
-                  title={
-                    <span>
-                      <BulbOutlined style={{ color: '#1890ff', marginRight: '8px' }} />
-                      Long-term Enhancements
-                      <Badge count={actionPlan.long_term_enhancements.length} style={{ backgroundColor: '#1890ff', marginLeft: '8px' }} />
-                    </span>
-                  }
-                  headStyle={{ backgroundColor: '#f6ffed' }}
-                >
-                  <List
-                    size="small"
-                    dataSource={actionPlan.long_term_enhancements}
-                    renderItem={(action, index) => (
-                      <List.Item style={{ padding: '8px 0' }}>
-                        <div>
-                          <BulbOutlined style={{ color: '#1890ff', marginRight: '8px' }} />
-                          <Text style={{ fontSize: '13px' }}>{action}</Text>
-                        </div>
-                      </List.Item>
-                    )}
-                  />
-                </Card>
-              </Col>
-            )}
-          </Row>
-        </Card>
-      )}
-
-      <Row gutter={[24, 24]} style={{ marginBottom: '24px' }}>
-        {/* Compliance Recommendations */}
-        {complianceRecommendations.items?.length > 0 && (
-          <Col xs={24} lg={12}>
-            <Card 
-              title={
-                <span>
-                  <BulbOutlined style={{ color: '#1890ff', marginRight: '8px' }} />
-                  Regulatory Recommendations ({complianceRecommendations.count})
-                </span>
-              }
-              size="small"
-            >
-              <Text style={{ color: '#8c8c8c', marginBottom: '16px', display: 'block' }}>
-                {complianceRecommendations.description}
-              </Text>
-              <List
-                dataSource={complianceRecommendations.items}
-                renderItem={(item) => (
-                  <List.Item>
-                    <Card size="small" style={{ width: '100%' }}>
-                      <Row gutter={[16, 8]}>
-                        <Col xs={24}>
-                          <Space>
-                            <InfoCircleOutlined style={{ color: '#1890ff' }} />
-                            <Text strong>{item.area}</Text>
-                            <Tag color={getPriorityColor(item.priority)}>Priority: {item.priority}</Tag>
-                            {item.implementation_effort && <Tag color="geekblue">Effort: {item.implementation_effort}</Tag>}
-                          </Space>
-                        </Col>
-                        <Col xs={24}>
-                          <Paragraph style={{ margin: 0 }}>
-                            <Text strong>Recommended Change: </Text>
-                            <Text>{item.recommended_change}</Text>
-                          </Paragraph>
-                        </Col>
-                        <Col xs={24}>
-                          <Paragraph style={{ margin: 0 }}>
-                            <Text strong>Business Benefit: </Text>
-                            <Text style={{ color: '#52c41a' }}>{item.business_benefit}</Text>
-                          </Paragraph>
-                        </Col>
-                      </Row>
-                    </Card>
-                  </List.Item>
-                )}
-              />
-            </Card>
-          </Col>
-        )}
-
-        {/* Compliant Areas */}
-        {compliantItems.items?.length > 0 && (
-          <Col xs={24} lg={12}>
-            <Card 
-              title={
-                <span>
-                  <CheckCircleOutlined style={{ color: '#52c41a', marginRight: '8px' }} />
-                  QFC Compliant Areas ({compliantItems.count})
-                </span>
-              }
-              size="small"
-            >
-              <Text style={{ color: '#8c8c8c', marginBottom: '16px', display: 'block' }}>
-                {compliantItems.description}
-              </Text>
-              <List
-                dataSource={compliantItems.items}
-                renderItem={(item) => (
-                  <List.Item>
-                    <List.Item.Meta
-                      avatar={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
-                      title={
-                        <Space>
-                          <Text strong>{item.compliance_area}</Text>
-                          <Tag color="success">{item.qfc_article}</Tag>
-                        </Space>
-                      }
-                      description={
-                        <div>
-                          <Paragraph style={{ margin: '4px 0' }}>
-                            <Text strong>Evidence: </Text>
-                            <Text>{item.evidence}</Text>
-                          </Paragraph>
-                          <Paragraph style={{ margin: 0 }}>
-                            <Text strong>Strength: </Text>
-                            <Text style={{ color: '#52c41a' }}>{item.strength}</Text>
-                          </Paragraph>
-                        </div>
-                      }
-                    />
-                  </List.Item>
-                )}
-              />
-            </Card>
-          </Col>
-        )}
-      </Row>
-
-      {/* Fallback to existing violations display */}
-      {!comprehensiveData && violations.length > 0 && (
-        <Row gutter={[24, 24]} style={{ marginBottom: '24px' }}>
-          <Col xs={24} lg={12}>
-            <Card 
-              title={
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <WarningOutlined style={{ color: '#faad14' }} />
-                  QFC Article Violations ({violations.length})
-                </div>
-              }
-              size="small"
-            >
-              <List
-                dataSource={violations.slice(0, 10)}
-                renderItem={(violation) => (
-                  <List.Item>
-                    <div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                        <Text strong style={{ color: '#262626' }}>
-                          {violation.article}
-                        </Text>
-                        <Tag color={getSeverityColor(violation.severity)}>
-                          {violation.severity}
-                        </Tag>
-                      </div>
-                      <Text style={{ fontSize: '13px', color: '#666', display: 'block', marginBottom: '4px' }}>
-                        <Text strong>Violation:</Text> {violation.violation}
-                      </Text>
-                      <Text style={{ fontSize: '13px', color: '#1890ff' }}>
-                        <Text strong>Required:</Text> {violation.required}
-                      </Text>
-                    </div>
-                  </List.Item>
-                )}
-              />
-              {violations.length > 10 && (
-                <Text type="secondary" style={{ fontSize: '12px' }}>
-                  +{violations.length - 10} more violations
-                </Text>
-              )}
-            </Card>
-          </Col>
-
-          <Col xs={24} lg={12}>
-            <Card 
-              title={
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <InfoCircleOutlined style={{ color: '#1890ff' }} />
-                  Recommendations ({recommendations.length})
-                </div>
-              }
-              size="small"
-            >
-              <List
-                dataSource={recommendations.slice(0, 10)}
-                renderItem={(recommendation) => (
-                  <List.Item>
-                    <div>
-                      <Text strong style={{ fontSize: '13px', color: '#262626', display: 'block', marginBottom: '4px' }}>
-                        {recommendation.area || 'General Recommendation'}
-                      </Text>
-                      <Text style={{ fontSize: '12px', color: '#666' }}>
-                        {recommendation.recommendation || recommendation.description || 'No description available'}
-                      </Text>
-                    </div>
-                  </List.Item>
-                )}
-              />
-              {recommendations.length > 10 && (
-                <Text type="secondary" style={{ fontSize: '12px' }}>
-                  +{recommendations.length - 10} more recommendations
-                </Text>
-              )}
-            </Card>
-          </Col>
-        </Row>
-      )}
-
-      {/* Document Inconsistencies */}
-      {documentInconsistencies.items?.length > 0 && (
-        <Card 
-          title={
-            <span>
-              <WarningOutlined style={{ color: '#faad14', marginRight: '8px' }} />
-              Document Inconsistencies ({documentInconsistencies.count})
-            </span>
-          }
-          style={{ marginBottom: '24px' }}
-        >
-          <Text style={{ color: '#8c8c8c', marginBottom: '16px', display: 'block' }}>
-            {documentInconsistencies.description}
-          </Text>
           <List
-            dataSource={documentInconsistencies.items}
-            renderItem={(item) => (
+            dataSource={recommendations}
+            renderItem={(recommendation) => (
               <List.Item>
-                <Card size="small" style={{ width: '100%' }}>
-                  <Row gutter={[16, 8]}>
-                    <Col xs={24}>
-                      <Space>
-                        <WarningOutlined style={{ color: '#faad14' }} />
-                        <Text strong>{item.conflict_area}</Text>
-                        <Tag color={getPriorityColor(item.priority)}>Priority: {item.priority}</Tag>
-                      </Space>
-                    </Col>
-                    <Col xs={24}>
-                      <Paragraph style={{ margin: 0 }}>
-                        <Text strong>Conflicting Statements: </Text>
-                      </Paragraph>
-                      <ul style={{ margin: '8px 0' }}>
-                        {item.conflicting_statements?.map((statement, index) => (
-                          <li key={index}><Text style={{ fontSize: '12px' }}>{statement}</Text></li>
-                        ))}
-                      </ul>
-                    </Col>
-                    <Col xs={24}>
-                      <Paragraph style={{ margin: 0 }}>
-                        <Text strong>Operational Risk: </Text>
-                        <Text style={{ color: '#faad14' }}>{item.operational_risk}</Text>
-                      </Paragraph>
-                    </Col>
-                    <Col xs={24}>
-                      <Paragraph style={{ margin: 0 }}>
-                        <Text strong>Recommended Resolution: </Text>
-                        <Text style={{ color: '#1890ff' }}>{item.recommended_resolution}</Text>
-                      </Paragraph>
-                    </Col>
-                  </Row>
-                </Card>
+                <List.Item.Meta
+                  avatar={getPriorityIcon(recommendation.priority)}
+                  title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Text strong>{recommendation.area}</Text>
+                      <Tag color={getSeverityColor(recommendation.priority)}>
+                        {recommendation.priority} priority
+                      </Tag>
+                    </div>
+                  }
+                  description={
+                    <div>
+                      <Text style={{ marginBottom: '4px', display: 'block' }}>
+                        <strong>Current Practice:</strong> {recommendation.current_practice}
+                      </Text>
+                      <Text style={{ marginBottom: '4px', display: 'block' }}>
+                        <strong>Recommended Change:</strong> {recommendation.recommended_change}
+                      </Text>
+                      <Text style={{ color: '#52c41a' }}>
+                        <strong>Business Benefit:</strong> {recommendation.business_benefit}
+                      </Text>
+                    </div>
+                  }
+                />
               </List.Item>
             )}
           />
         </Card>
       )}
 
+      {/* Document Inconsistencies */}
+      {inconsistencies.length > 0 && (
+        <Card
+          title={
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FileProtectOutlined style={{ color: '#1890ff' }} />
+              Document Inconsistencies
+            </div>
+          }
+          style={{ marginBottom: '24px' }}
+        >
+          <List
+            dataSource={inconsistencies}
+            renderItem={(inconsistency) => (
+              <List.Item>
+                <List.Item.Meta
+                  avatar={<ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />}
+                  title={<Text strong>{inconsistency.conflict_area}</Text>}
+                  description={
+                    <div>
+                      <Text strong style={{ display: 'block', marginBottom: '8px' }}>Conflicting Statements:</Text>
+                      <ul style={{ marginBottom: '8px' }}>
+                        {inconsistency.conflicting_statements.map((statement, idx) => (
+                          <li key={idx}>{statement}</li>
+                        ))}
+                      </ul>
+                      <Text style={{ marginBottom: '4px', display: 'block' }}>
+                        <strong>Operational Risk:</strong> {inconsistency.operational_risk}
+                      </Text>
+                      <Text style={{ color: '#1890ff' }}>
+                        <strong>Recommended Resolution:</strong> {inconsistency.recommended_resolution}
+                      </Text>
+                    </div>
+                  }
+                />
+              </List.Item>
+            )}
+          />
+        </Card>
+      )}
+
+      {/* Action Plan */}
+      {actionPlan && (
+        <Card
+          title={
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FileAddOutlined style={{ color: '#52c41a' }} />
+              Recommended Action Plan
+            </div>
+          }
+        >
+          <Collapse defaultActiveKey={['1']}>
+            <Panel header="Immediate Actions (Critical Compliance Issues)" key="1">
+              <List
+                dataSource={actionPlan.immediate_actions || []}
+                renderItem={(action) => (
+                  <List.Item>
+                    <List.Item.Meta
+                      avatar={<ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />}
+                      description={action}
+                    />
+                  </List.Item>
+                )}
+              />
+            </Panel>
+            <Panel header="Short-term Improvements" key="2">
+              <List
+                dataSource={actionPlan.short_term_improvements || []}
+                renderItem={(action) => (
+                  <List.Item>
+                    <List.Item.Meta
+                      avatar={<WarningOutlined style={{ color: '#faad14' }} />}
+                      description={action}
+                    />
+                  </List.Item>
+                )}
+              />
+            </Panel>
+            <Panel header="Long-term Enhancements" key="3">
+              <List
+                dataSource={actionPlan.long_term_enhancements || []}
+                renderItem={(action) => (
+                  <List.Item>
+                    <List.Item.Meta
+                      avatar={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
+                      description={action}
+                    />
+                  </List.Item>
+                )}
+              />
+            </Panel>
+          </Collapse>
+        </Card>
+      )}
+
       {/* No Data Message */}
-      {!comprehensiveData && violations.length === 0 && (
+      {!loading && violations.length === 0 && recommendations.length === 0 && inconsistencies.length === 0 && (
         <Card>
-          <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <FileProtectOutlined style={{ fontSize: '48px', color: '#d9d9d9' }} />
-            <Title level={4} style={{ color: '#bfbfbf', marginTop: '16px' }}>
-              No Regulatory Data Available
-            </Title>
-            <Text type="secondary">
-              Upload documents for compliance analysis to see QFC regulatory violations and recommendations.
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <FileProtectOutlined style={{ fontSize: '48px', color: '#d9d9d9', marginBottom: '16px' }} />
+            <Title level={4} style={{ color: '#999' }}>No Compliance Data Available</Title>
+            <Text style={{ color: '#666' }}>
+              Upload and process documents to see QFC Article violations and compliance analysis.
             </Text>
           </div>
         </Card>

@@ -18,17 +18,17 @@ export const extractDashboardData = (apiResponse) => {
     } = parsedData;
     
     return {
-      compliance_status: final_assessment?.overall_compliance_status || 'Unknown',
+      compliance_status: final_assessment?.overall_compliance_status || '0',
       compliance_rate: dashboard_metrics?.compliance_rate || '0%',
       critical_issues: dashboard_metrics?.total_critical_gaps || critical_gaps?.count || 0,
       reviews_this_month: dashboard_metrics?.reviews_this_month || 0,
       avg_review_time: dashboard_metrics?.avg_review_time || '0 hrs',
       gaps_found: dashboard_metrics?.gaps_found || 0,
       confidence_score: final_assessment?.confidence_score || '0%',
-      risk_level: final_assessment?.risk_level || 'Unknown',
+      risk_level: final_assessment?.risk_level || '0',
       next_review_date: final_assessment?.next_review_date || null,
       executive_summary: final_assessment?.executive_summary || '',
-      document_type: analysis_summary?.document_type || 'Unknown',
+      document_type: analysis_summary?.document_type || '0',
       company_name: analysis_summary?.company_name || 'Not specified',
       analysis_date: analysis_summary?.analysis_date || new Date().toISOString().split('T')[0],
       overall_status: analysis_summary?.overall_status || 'Pending',

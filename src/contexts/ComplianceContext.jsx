@@ -9,13 +9,23 @@ import {
 
 // Initial state
 const initialState = {
-  dashboardData: null,
+  dashboardData: {
+    reviews_this_month: 0,
+    compliance_rate: "0%",
+    gaps_found: 0,
+    avg_review_time: "0 hrs",
+    total_critical_gaps: 0,
+    total_recommendations: 0,
+    total_inconsistencies: 0,
+    total_compliant_areas: 0
+  },
   reviewsData: { reviews: [] },
   regulationsData: {},
   complianceData: {},
   loading: false,
   error: null,
-  lastUpdated: null
+  lastUpdated: null,
+  documentAnalysis: null
 };
 
 // Action types
@@ -26,6 +36,7 @@ const ActionTypes = {
   UPDATE_REVIEWS_DATA: 'UPDATE_REVIEWS_DATA',
   UPDATE_REGULATIONS_DATA: 'UPDATE_REGULATIONS_DATA',
   UPDATE_COMPLIANCE_DATA: 'UPDATE_COMPLIANCE_DATA',
+  SET_DOCUMENT_ANALYSIS: 'SET_DOCUMENT_ANALYSIS',
   REFRESH_ALL_DATA: 'REFRESH_ALL_DATA',
   CLEAR_ERROR: 'CLEAR_ERROR'
 };
@@ -49,7 +60,10 @@ const complianceReducer = (state, action) => {
     case ActionTypes.UPDATE_DASHBOARD_DATA:
       return {
         ...state,
-        dashboardData: action.payload,
+        dashboardData: {
+          ...state.dashboardData,
+          ...action.payload
+        },
         lastUpdated: new Date().toISOString(),
         error: null
       };
@@ -78,13 +92,21 @@ const complianceReducer = (state, action) => {
         error: null
       };
       
+    case ActionTypes.SET_DOCUMENT_ANALYSIS:
+      return {
+        ...state,
+        documentAnalysis: action.payload,
+        lastUpdated: new Date().toISOString(),
+        error: null
+      };
+      
     case ActionTypes.REFRESH_ALL_DATA:
       return {
         ...state,
-        dashboardData: action.payload.dashboardData,
-        reviewsData: action.payload.reviewsData,
-        regulationsData: action.payload.regulationsData,
-        complianceData: action.payload.complianceData,
+        dashboardData: action.payload.dashboardData || initialState.dashboardData,
+        reviewsData: action.payload.reviewsData || initialState.reviewsData,
+        regulationsData: action.payload.regulationsData || initialState.regulationsData,
+        complianceData: action.payload.complianceData || initialState.complianceData,
         lastUpdated: new Date().toISOString(),
         loading: false,
         error: null
@@ -142,6 +164,33 @@ export const ComplianceProvider = ({ children }) => {
     dispatch({ type: ActionTypes.UPDATE_COMPLIANCE_DATA, payload: data });
   };
 
+  const setDocumentAnalysis = (analysisData) => {
+    dispatch({ type: ActionTypes.SET_DOCUMENT_ANALYSIS, payload: analysisData });
+    
+    // Update dashboard metrics with the new analysis
+    if (analysisData?.dashboard_metrics) {
+      updateDashboardData(analysisData.dashboard_metrics);
+    }
+    
+    // Add to reviews history
+    if (analysisData?.analysis_summary) {
+      const newReview = {
+        id: Date.now(),
+        documentType: analysisData.analysis_summary.document_type,
+        companyName: analysisData.analysis_summary.company_name || 'Unknown',
+        date: analysisData.analysis_summary.analysis_date || new Date().toISOString(),
+        status: analysisData.final_assessment?.overall_compliance_status || 'Unknown',
+        criticalIssues: analysisData.critical_gaps?.count || 0,
+        confidenceScore: analysisData.final_assessment?.confidence_score || '0%'
+      };
+      
+      const updatedReviews = {
+        reviews: [newReview, ...state.reviewsData.reviews]
+      };
+      updateReviewsData(updatedReviews);
+    }
+  };
+
   const loadAllData = async () => {
     try {
       setLoading(true);
@@ -176,34 +225,60 @@ export const ComplianceProvider = ({ children }) => {
   };
 
   const getCriticalIssuesCount = () => {
-    return state.dashboardData?.critical_issues || 0;
+    return state.dashboardData?.total_critical_gaps || 0;
   };
 
   const getComplianceStatus = () => {
-    return state.dashboardData?.compliance_status || '0';
+    return state.dashboardData?.compliance_rate || '0%';
   };
 
   const getRecentReviews = (limit = 5) => {
     const reviews = state.reviewsData?.reviews || [];
     return reviews
-      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
       .slice(0, limit);
   };
 
   const getViolationsByArticle = () => {
-    return state.regulationsData?.articles || {};
+    if (state.documentAnalysis?.critical_gaps?.items) {
+      return state.documentAnalysis.critical_gaps.items.reduce((acc, item) => {
+        const article = item.qfc_article;
+        if (!acc[article]) {
+          acc[article] = [];
+        }
+        acc[article].push(item);
+        return acc;
+      }, {});
+    }
+    return {};
   };
 
   const getAllViolations = () => {
-    return state.regulationsData?.violations || [];
+    return state.documentAnalysis?.critical_gaps?.items || [];
   };
 
   const getMustFixItems = () => {
-    return state.dashboardData?.must_fix_items || [];
+    return state.documentAnalysis?.action_plan?.immediate_actions || [];
   };
 
   const getKeyIssues = () => {
-    return state.dashboardData?.key_issues || [];
+    return state.documentAnalysis?.critical_gaps?.items?.slice(0, 3) || [];
+  };
+
+  const getRecommendations = () => {
+    return state.documentAnalysis?.recommendations?.items || [];
+  };
+
+  const getInconsistencies = () => {
+    return state.documentAnalysis?.inconsistencies?.items || [];
+  };
+
+  const getActionPlan = () => {
+    return state.documentAnalysis?.action_plan || {};
+  };
+
+  const getFinalAssessment = () => {
+    return state.documentAnalysis?.final_assessment || {};
   };
 
   // Context value
@@ -219,6 +294,7 @@ export const ComplianceProvider = ({ children }) => {
     updateReviewsData,
     updateRegulationsData,
     updateComplianceData,
+    setDocumentAnalysis,
     refreshData,
     
     // Computed values
@@ -229,7 +305,11 @@ export const ComplianceProvider = ({ children }) => {
     getViolationsByArticle,
     getAllViolations,
     getMustFixItems,
-    getKeyIssues
+    getKeyIssues,
+    getRecommendations,
+    getInconsistencies,
+    getActionPlan,
+    getFinalAssessment
   };
 
   return (
