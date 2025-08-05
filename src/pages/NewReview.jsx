@@ -124,56 +124,74 @@ const NewReview = () => {
         <Card title="Uploaded Document: Employment Contract" style={{ marginTop: 24 }}>
           <Collapse accordion>
             <Panel header="Mandatory Compliance Issues" key="1">
-              {renderList(parsedResult.mandatory_compliance_issues, (item) => (
-                <List.Item>
-                  <div>
-                    <Text strong>Violation:</Text> {item.violation} <br />
-                    <Text strong>QFC Article:</Text> {item.qfc_article} <br />
-                    <Text strong>Document States:</Text> {item.document_states} <br />
-                    <Text strong>QFC Requires:</Text> {item.qfc_requires} <br />
-                    <Text strong>Fix Required:</Text> {item.fix_required}
-                  </div>
-                </List.Item>
-              ))}
+              {parsedResult.mandatory_compliance_issues && parsedResult.mandatory_compliance_issues.length > 0 ? (
+                renderList(parsedResult.mandatory_compliance_issues, (item) => (
+                  <List.Item>
+                    <div>
+                      <Text strong>Violation:</Text> {item.violation} <br />
+                      <Text strong>QFC Article:</Text> {item.qfc_article} <br />
+                      <Text strong>Document States:</Text> {item.document_states} <br />
+                      <Text strong>QFC Requires:</Text> {item.qfc_requires} <br />
+                      <Text strong>Fix Required:</Text> {item.fix_required}
+                    </div>
+                  </List.Item>
+                ))
+              ) : (
+                <p>No mandatory compliance issues found</p>
+              )}
             </Panel>
 
             <Panel header="Best Practice Recommendations" key="2">
-              {renderList(parsedResult.best_practice_recommendations, (item) => (
-                <List.Item>
-                  <div>
-                    <Text strong>Area:</Text> {item.area} <br />
-                    <Text strong>Current:</Text> {item.current} <br />
-                    <Text strong>Recommendation:</Text> {item.recommendation} <br />
-                    <Text strong>Benefit:</Text> {item.benefit}
-                  </div>
-                </List.Item>
-              ))}
+              {parsedResult.best_practice_recommendations && parsedResult.best_practice_recommendations.length > 0 ? (
+                renderList(parsedResult.best_practice_recommendations, (item) => (
+                  <List.Item>
+                    <div>
+                      <Text strong>Area:</Text> {item.area} <br />
+                      <Text strong>Current:</Text> {item.current} <br />
+                      <Text strong>Recommendation:</Text> {item.recommendation} <br />
+                      <Text strong>Benefit:</Text> {item.benefit}
+                    </div>
+                  </List.Item>
+                ))
+              ) : (
+                <p>No best practice recommendations available</p>
+              )}
             </Panel>
 
             <Panel header="Document Inconsistencies" key="3">
-              {renderList(parsedResult.document_inconsistencies, (item) => (
-                <List.Item>
-                  <div>
-                    <Text strong>Issue:</Text> {item.issue} <br />
-                    <Text strong>Problem:</Text> {item.problem} <br />
-                    <Text strong>Solution:</Text> {item.solution}
-                  </div>
-                </List.Item>
-              ))}
+              {parsedResult.document_inconsistencies && parsedResult.document_inconsistencies.length > 0 ? (
+                renderList(parsedResult.document_inconsistencies, (item) => (
+                  <List.Item>
+                    <div>
+                      <Text strong>Issue:</Text> {item.issue} <br />
+                      <Text strong>Problem:</Text> {item.problem} <br />
+                      <Text strong>Solution:</Text> {item.solution}
+                    </div>
+                  </List.Item>
+                ))
+              ) : (
+                <p>No document inconsistencies found</p>
+              )}
             </Panel>
 
             <Panel header="Compliance Summary" key="4">
-              <p>
-                <Text strong>Status:</Text> {parsedResult.compliance_summary.status}
-              </p>
-              <p>
-                <Text strong>Critical Issues:</Text> {parsedResult.compliance_summary.critical_issues}
-              </p>
-              <List
-                header={<Text strong>Must Fix Items</Text>}
-                dataSource={parsedResult.compliance_summary.must_fix_items}
-                renderItem={(item) => <List.Item>{item}</List.Item>}
-              />
+              {parsedResult.compliance_summary ? (
+                <>
+                  <p>
+                    <Text strong>Status:</Text> {parsedResult.compliance_summary.status || 'Not available'}
+                  </p>
+                  <p>
+                    <Text strong>Critical Issues:</Text> {parsedResult.compliance_summary.critical_issues || 'Not available'}
+                  </p>
+                  <List
+                    header={<Text strong>Must Fix Items</Text>}
+                    dataSource={parsedResult.compliance_summary.must_fix_items || []}
+                    renderItem={(item) => <List.Item>{item}</List.Item>}
+                  />
+                </>
+              ) : (
+                <p>Compliance summary not available</p>
+              )}
             </Panel>
           </Collapse>
 
