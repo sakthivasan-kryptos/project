@@ -9,14 +9,19 @@ import {
   Spin,
   Collapse,
   List,
-  Tag,
+  notification,
+  Breadcrumb,
 } from 'antd';
 import {
   InboxOutlined,
+  CheckCircleOutlined,
+  HomeOutlined,
+  FileAddOutlined,
 } from '@ant-design/icons';
 import PageHeader from '../components/ui/PageHeader';
+import { storeComprehensiveApiResponse, storeApiResponse } from '../services/localStorageService';
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 const { Dragger } = Upload;
 const { Panel } = Collapse;
 
@@ -24,60 +29,114 @@ const NewReview = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [parsedResult, setParsedResult] = useState(null);
+  const [apiResponseData, setApiResponseData] = useState(null);
 
-  const handleUpload = async (file) => {
-    if (file.type !== 'application/pdf') {
-      message.error('Only PDF files are allowed!');
-      return false;
+ const handleUpload = async (file) => {
+  if (file.type !== 'application/pdf') {
+    message.error('Only PDF files are allowed!');
+    return false;
+  }
+
+  const maxSize = 10 * 1024 * 1024;
+  if (file.size > maxSize) {
+    message.error('File size must be less than 10MB!');
+    return false;
+  }
+
+  setUploading(true);
+
+  try {
+    // Convert PDF to base64
+    const pdf_base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = (error) => reject(error);
+    });
+
+    const response = await fetch('https://complainceanalysis-dtddbbcpeuc3h0f7.eastus2-01.azurewebsites.net/api/upload', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ pdf_base64 }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Upload failed');
     }
 
-    const maxSize = 10 * 1024 * 1024;
-    if (file.size > maxSize) {
-      message.error('File size must be less than 10MB!');
-      return false;
-    }
-
-    setUploading(true);
-
+    const result = await response.json();
+    
+    // Parse the response data
+    let parsedData = null;
     try {
-      // Convert PDF to base64
-      const pdf_base64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result.split(',')[1]);
-        reader.onloadend = () => resolve(reader.result.split(',')[1]);
-        reader.onerror = (error) => reject(error);
-      });
+      parsedData = JSON.parse(result.final);
+    } catch (parseError) {
+      console.warn('Failed to parse result.final as JSON, using raw result:', parseError);
+      parsedData = result;
+    }
 
-      const response = await fetch('https://complainceanalysis-dtddbbcpeuc3h0f7.eastus2-01.azurewebsites.net/api/upload', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ pdf_base64 }),
-      });
+    setParsedResult(parsedData);
+    setApiResponseData(result);
 
-      if (!response.ok) {
-        throw new Error('Upload failed');
+    // Store in localStorage using comprehensive storage service
+    try {
+      const metadata = {
+        source: 'comprehensive_new_review',
+        fileName: file.name,
+        fileSize: file.size,
+        uploadDate: new Date().toISOString(),
+        documentType: 'PDF Employment Document'
+      };
+
+      let responseId;
+      
+      // Check if this is a comprehensive response with structured data
+      if (parsedData && (
+        parsedData.critical_gaps || 
+        parsedData.recommendations || 
+        parsedData.final_assessment ||
+        parsedData.action_plan ||
+        parsedData.analysis_summary
+      )) {
+        // Store as comprehensive response
+        responseId = storeComprehensiveApiResponse(parsedData, metadata);
+        console.log('Stored comprehensive API response with ID:', responseId);
+      } else {
+        // Store as simple response (legacy format support)
+        responseId = storeApiResponse(result, metadata);
+        console.log('Stored simple API response with ID:', responseId);
       }
 
-      const result = await response.json();
-      const parsed = JSON.parse(result.final);
-      setParsedResult(parsed);
+      // Also maintain backward compatibility with cookie storage
       document.cookie = `lastUploadResponse=${JSON.stringify(result)}; path=/; max-age=86400`;
-      setUploadSuccess(true);
-
-      message.success('Document successfully analyzed!', 3);
-    } catch (err) {
-      console.error('Upload error:', err);
-      message.error('Upload failed. Please try again.');
-    } finally {
-      setUploading(false);
+      
+    } catch (storageError) {
+      console.error('Error storing API response in localStorage:', storageError);
+      // Continue with cookie fallback for backward compatibility
+      document.cookie = `lastUploadResponse=${JSON.stringify(result)}; path=/; max-age=86400`;
     }
 
-    return false;
-  };
+    setUploadSuccess(true);
 
+    // Show success message with more details
+    notification.success({
+      message: 'Document Analysis Complete',
+      description: `PDF "${file.name}" has been successfully analyzed and stored. Navigate to Dashboard, All Reviews, Regulations, or Reports to view the results.`,
+      duration: 5,
+      placement: 'topRight'
+    });
+
+  } catch (err) {
+    console.error('Upload error:', err);
+    message.error('Upload failed. Please try again.');
+  } finally {
+    setUploading(false);
+  }
+
+  return false;
+};
   const uploadProps = {
     name: 'file',
     multiple: false,
@@ -90,6 +149,7 @@ const NewReview = () => {
   const handleNewUpload = () => {
     setUploadSuccess(false);
     setParsedResult(null);
+    setApiResponseData(null);
   };
 
   const renderList = (items, renderItem) => (
@@ -101,138 +161,162 @@ const NewReview = () => {
     />
   );
 
-  const getSeverityColor = (severity) => {
-    switch (severity.toLowerCase()) {
-      case 'critical': return 'red';
-      case 'high': return 'orange';
-      case 'medium': return 'gold';
-      case 'low': return 'green';
-      default: return 'blue';
-    }
-  };
-
-  if (uploadSuccess && parsedResult) {
+  // Enhanced results display with better data handling
+  if (uploadSuccess && (parsedResult || apiResponseData)) {
+    const displayData = parsedResult || apiResponseData;
+    
     return (
       <div>
+        {/* Breadcrumb Navigation */}
+        <Breadcrumb style={{ margin: '16px 0' }}>
+          <Breadcrumb.Item>
+            <HomeOutlined />
+          </Breadcrumb.Item>
+          <Breadcrumb.Item>New Review</Breadcrumb.Item>
+          <Breadcrumb.Item>Results</Breadcrumb.Item>
+        </Breadcrumb>
+
         <PageHeader
           title="Compliance Review Results"
-          subtitle="Document successfully analyzed. See results below."
+          subtitle="Document successfully analyzed and stored. Results are now available across all screens."
           centered
         />
-        
-        <Card 
-          title={`Uploaded Document: ${parsedResult.analysis_summary.document_type}`} 
-          style={{ marginTop: 24 }}
-          extra={
-            <Tag color={parsedResult.final_assessment.risk_level === 'High' ? 'red' : 'orange'}>
-              {parsedResult.final_assessment.overall_compliance_status}
-            </Tag>
-          }
-        >
-          <div style={{ marginBottom: 24 }}>
-            <Title level={5}>Executive Summary</Title>
-            <Text>{parsedResult.final_assessment.executive_summary}</Text>
-          </div>
+        <Card title="Uploaded Document Analysis Complete" style={{ marginTop: 24 }}>
+          
+          {/* Show comprehensive results if available */}
+          {displayData.critical_gaps || displayData.recommendations || displayData.final_assessment ? (
+            <Collapse accordion>
+              {displayData.critical_gaps && (
+                <Panel header={`Critical Gaps (${displayData.critical_gaps.count || 0})`} key="critical_gaps">
+                  {displayData.critical_gaps.items ? renderList(displayData.critical_gaps.items, (item) => (
+                    <List.Item>
+                      <div>
+                        <Text strong>Gap Type:</Text> {item.gap_type || 'N/A'} <br />
+                        <Text strong>QFC Article:</Text> {item.qfc_article || 'N/A'} <br />
+                        <Text strong>Current State:</Text> {item.document_states || 'N/A'} <br />
+                        <Text strong>QFC Requires:</Text> {item.qfc_requires || 'N/A'} <br />
+                        <Text strong>Immediate Action:</Text> {item.immediate_action || 'N/A'}
+                      </div>
+                    </List.Item>
+                  )) : <Text>No critical gaps found.</Text>}
+                </Panel>
+              )}
 
-          <Collapse accordion defaultActiveKey={['1']}>
-            <Panel header={`Critical Compliance Gaps (${parsedResult.critical_gaps.count})`} key="1">
-              {renderList(parsedResult.critical_gaps.items, (item) => (
-                <List.Item>
+              {displayData.recommendations && (
+                <Panel header={`Recommendations (${displayData.recommendations.count || 0})`} key="recommendations">
+                  {displayData.recommendations.items ? renderList(displayData.recommendations.items, (item) => (
+                    <List.Item>
+                      <div>
+                        <Text strong>Area:</Text> {item.area || 'N/A'} <br />
+                        <Text strong>Recommended Change:</Text> {item.recommended_change || 'N/A'} <br />
+                        <Text strong>Business Benefit:</Text> {item.business_benefit || 'N/A'} <br />
+                        <Text strong>Priority:</Text> {item.priority || 'N/A'}
+                      </div>
+                    </List.Item>
+                  )) : <Text>No recommendations available.</Text>}
+                </Panel>
+              )}
+
+              {displayData.inconsistencies && (
+                <Panel header={`Document Inconsistencies (${displayData.inconsistencies.count || 0})`} key="inconsistencies">
+                  {displayData.inconsistencies.items ? renderList(displayData.inconsistencies.items, (item) => (
+                    <List.Item>
+                      <div>
+                        <Text strong>Conflict Area:</Text> {item.conflict_area || 'N/A'} <br />
+                        <Text strong>Operational Risk:</Text> {item.operational_risk || 'N/A'} <br />
+                        <Text strong>Recommended Resolution:</Text> {item.recommended_resolution || 'N/A'}
+                      </div>
+                    </List.Item>
+                  )) : <Text>No inconsistencies found.</Text>}
+                </Panel>
+              )}
+
+              {displayData.final_assessment && (
+                <Panel header="Final Assessment" key="final_assessment">
                   <div>
-                    <Text strong>Gap Type:</Text> {item.gap_type} <br />
-                    <Text strong>Severity:</Text> <Tag color={getSeverityColor(item.severity)}>{item.severity}</Tag> <br />
-                    <Text strong>QFC Article:</Text> {item.qfc_article} <br />
-                    <Text strong>Document States:</Text> {item.document_states} <br />
-                    <Text strong>QFC Requires:</Text> {item.qfc_requires} <br />
-                    <Text strong>Immediate Action:</Text> {item.immediate_action} <br />
-                    <Text strong>Legal Risk:</Text> <Tag color={getSeverityColor(item.legal_risk)}>{item.legal_risk}</Tag>
+                    <Text strong>Overall Compliance Status:</Text> {displayData.final_assessment.overall_compliance_status || 'Unknown'} <br />
+                    <Text strong>Risk Level:</Text> {displayData.final_assessment.risk_level || 'Unknown'} <br />
+                    <Text strong>Confidence Score:</Text> {displayData.final_assessment.confidence_score || 'N/A'} <br />
+                    {displayData.final_assessment.executive_summary && (
+                      <>
+                        <br />
+                        <Text strong>Executive Summary:</Text>
+                        <div style={{ marginTop: '8px', padding: '12px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
+                          {displayData.final_assessment.executive_summary}
+                        </div>
+                      </>
+                    )}
                   </div>
-                </List.Item>
-              ))}
-            </Panel>
-
-            <Panel header={`Best Practice Recommendations (${parsedResult.recommendations.count})`} key="2">
-              {renderList(parsedResult.recommendations.items, (item) => (
-                <List.Item>
-                  <div>
-                    <Text strong>Area:</Text> {item.area} <br />
-                    <Text strong>Priority:</Text> <Tag color={getSeverityColor(item.priority)}>{item.priority}</Tag> <br />
-                    <Text strong>Current Practice:</Text> {item.current_practice} <br />
-                    <Text strong>Recommended Change:</Text> {item.recommended_change} <br />
-                    <Text strong>Business Benefit:</Text> {item.business_benefit} <br />
-                    <Text strong>Implementation Effort:</Text> {item.implementation_effort}
-                  </div>
-                </List.Item>
-              ))}
-            </Panel>
-
-            <Panel header={`Document Inconsistencies (${parsedResult.inconsistencies.count})`} key="3">
-              {renderList(parsedResult.inconsistencies.items, (item) => (
-                <List.Item>
-                  <div>
-                    <Text strong>Conflict Area:</Text> {item.conflict_area} <br />
-                    <Text strong>Conflicting Statements:</Text>
-                    <ul>
-                      {item.conflicting_statements.map((statement, idx) => (
-                        <li key={idx}>{statement}</li>
-                      ))}
-                    </ul>
-                    <Text strong>Operational Risk:</Text> {item.operational_risk} <br />
-                    <Text strong>Recommended Resolution:</Text> {item.recommended_resolution} <br />
-                    <Text strong>Priority:</Text> <Tag color={getSeverityColor(item.priority)}>{item.priority}</Tag>
-                  </div>
-                </List.Item>
-              ))}
-            </Panel>
-
-            <Panel header="Action Plan" key="4">
-              <Title level={5}>Immediate Actions</Title>
-              <ul>
-                {parsedResult.action_plan.immediate_actions.map((action, idx) => (
-                  <li key={`immediate-${idx}`}>{action}</li>
+                </Panel>
+              )}
+            </Collapse>
+          ) : displayData.mandatory_compliance_issues ? (
+            // Legacy format support
+            <Collapse accordion>
+              <Panel header="Mandatory Compliance Issues" key="1">
+                {renderList(displayData.mandatory_compliance_issues, (item) => (
+                  <List.Item>
+                    <div>
+                      <Text strong>Violation:</Text> {item.violation} <br />
+                      <Text strong>QFC Article:</Text> {item.qfc_article} <br />
+                      <Text strong>Document States:</Text> {item.document_states} <br />
+                      <Text strong>QFC Requires:</Text> {item.qfc_requires} <br />
+                      <Text strong>Fix Required:</Text> {item.fix_required}
+                    </div>
+                  </List.Item>
                 ))}
-              </ul>
-              
-              <Title level={5}>Short-term Improvements</Title>
-              <ul>
-                {parsedResult.action_plan.short_term_improvements.map((action, idx) => (
-                  <li key={`short-${idx}`}>{action}</li>
-                ))}
-              </ul>
-              
-              <Title level={5}>Long-term Enhancements</Title>
-              <ul>
-                {parsedResult.action_plan.long_term_enhancements.map((action, idx) => (
-                  <li key={`long-${idx}`}>{action}</li>
-                ))}
-              </ul>
-            </Panel>
+              </Panel>
 
-            <Panel header="Compliance Metrics" key="5">
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-                <Card size="small" title="Critical Gaps" style={{ width: 200 }}>
-                  <Title level={2} style={{ margin: 0, color: 'red' }}>
-                    {parsedResult.dashboard_metrics.total_critical_gaps}
-                  </Title>
-                </Card>
-                <Card size="small" title="Recommendations" style={{ width: 200 }}>
-                  <Title level={2} style={{ margin: 0, color: 'orange' }}>
-                    {parsedResult.dashboard_metrics.total_recommendations}
-                  </Title>
-                </Card>
-                <Card size="small" title="Inconsistencies" style={{ width: 200 }}>
-                  <Title level={2} style={{ margin: 0, color: 'gold' }}>
-                    {parsedResult.dashboard_metrics.total_inconsistencies}
-                  </Title>
-                </Card>
-                <Card size="small" title="Compliant Areas" style={{ width: 200 }}>
-                  <Title level={2} style={{ margin: 0, color: 'green' }}>
-                    {parsedResult.dashboard_metrics.total_compliant_areas}
-                  </Title>
-                </Card>
-              </div>
-            </Panel>
-          </Collapse>
+              <Panel header="Best Practice Recommendations" key="2">
+                {renderList(displayData.best_practice_recommendations, (item) => (
+                  <List.Item>
+                    <div>
+                      <Text strong>Area:</Text> {item.area} <br />
+                      <Text strong>Current:</Text> {item.current} <br />
+                      <Text strong>Recommendation:</Text> {item.recommendation} <br />
+                      <Text strong>Benefit:</Text> {item.benefit}
+                    </div>
+                  </List.Item>
+                ))}
+              </Panel>
+
+              <Panel header="Document Inconsistencies" key="3">
+                {renderList(displayData.document_inconsistencies, (item) => (
+                  <List.Item>
+                    <div>
+                      <Text strong>Issue:</Text> {item.issue} <br />
+                      <Text strong>Problem:</Text> {item.problem} <br />
+                      <Text strong>Solution:</Text> {item.solution}
+                    </div>
+                  </List.Item>
+                ))}
+              </Panel>
+
+              <Panel header="Compliance Summary" key="4">
+                <p>
+                  <Text strong>Status:</Text> {displayData.compliance_summary?.status}
+                </p>
+                <p>
+                  <Text strong>Critical Issues:</Text> {displayData.compliance_summary?.critical_issues}
+                </p>
+                {displayData.compliance_summary?.must_fix_items && (
+                  <List
+                    header={<Text strong>Must Fix Items</Text>}
+                    dataSource={displayData.compliance_summary.must_fix_items}
+                    renderItem={(item) => <List.Item>{item}</List.Item>}
+                  />
+                )}
+              </Panel>
+            </Collapse>
+          ) : (
+            // Raw data display fallback
+            <div style={{ padding: '20px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
+              <Text strong>Analysis Results:</Text>
+              <pre style={{ marginTop: '10px', fontSize: '12px', whiteSpace: 'pre-wrap' }}>
+                {JSON.stringify(displayData, null, 2)}
+              </pre>
+            </div>
+          )}
 
           <div style={{ marginTop: 24, textAlign: 'center' }}>
             <Button type="primary" onClick={handleNewUpload}>
@@ -246,6 +330,17 @@ const NewReview = () => {
 
   return (
     <div>
+      {/* Breadcrumb Navigation */}
+      <Breadcrumb style={{ margin: '16px 0' }}>
+        <Breadcrumb.Item>
+          <HomeOutlined />
+        </Breadcrumb.Item>
+        <Breadcrumb.Item>
+          <FileAddOutlined />
+          <span style={{ marginLeft: '4px' }}>New Review</span>
+        </Breadcrumb.Item>
+      </Breadcrumb>
+
       <PageHeader
         title="Start New Compliance Review"
         subtitle="Upload PDF employment documents to analyze against QFC regulations"
